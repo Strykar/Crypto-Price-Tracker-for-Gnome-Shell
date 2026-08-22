@@ -35,3 +35,7 @@ jobs:
       - name: Shell tests (headless gnome-shell)
         run: ./tests/shell.sh
         continue-on-error: true
+
+      - name: Preference changes (headless gnome-shell)
+        run: ./tests/prefs-live.sh
+        continue-on-error: true

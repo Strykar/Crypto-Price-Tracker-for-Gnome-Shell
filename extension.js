@@ -216,14 +216,25 @@ export default class Extension extends Ex {
     this._indicator._buildAddCoinSection(this);
     this._indicator._buildCoinsSection();
 
-    this._priceService.connect(() => {
+    const redraw = () => {
       const style = this._settings.get_string('chart-style');
       for (const coin of this._indicator.coins)
         coin.onPricesUpdated(this._priceService, style);
       this._indicator.panelBox.update(this._priceService);
       applyPortfolio();
-    });
-    this._viewChangedId = this._settings.connect('changed::dropdown-view', applyPortfolio);
+    };
+    this._redraw = redraw;
+    this._priceService.connect(redraw);
+    this._settingsIds = [
+      this._settings.connect('changed::dropdown-view', () => this._redraw()),
+      this._settings.connect('changed::chart-style', () => this._redraw()),
+      this._settings.connect('changed::base-currency', () => this._redraw()),
+      // PriceService reads the interval once, so restart it.
+      this._settings.connect('changed::refresh-interval', () => {
+        this._priceService.stop();
+        this._priceService.start();
+      }),
+    ];
     this._priceService.start();
 
     Main.panel.addToStatusArea(this.uuid, this._indicator);
@@ -236,10 +247,9 @@ export default class Extension extends Ex {
       for (const c of this._indicator.coins) c.destroy();
     this._indicator?.destroy();
     this._indicator = null;
-    if (this._viewChangedId) {
-      this._settings.disconnect(this._viewChangedId);
-      this._viewChangedId = 0;
-    }
+    for (const id of this._settingsIds ?? []) this._settings.disconnect(id);
+    this._settingsIds = null;
+    this._redraw = null;
     this._applyPortfolio = null;
     this._settings = null;
     CryptoUtil.destroy();
