@@ -160,6 +160,7 @@ export let CoinMenuItem = GObject.registerClass(
     setPortfolioView(on, currency) {
       const eligible = on && quoteOf(this) === currency;
       this.amountEntry.visible = eligible;
+      this._statusBtn.visible = !on;
       // Runs every tick, so leave the entry alone while the user is typing.
       const editing = this.amountEntry.clutter_text?.has_key_focus?.();
       if (eligible && !editing) this.amountEntry.text = String(this.amount ?? 0);
