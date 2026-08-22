@@ -4,7 +4,12 @@ import GLib from 'gi://GLib';
 let _session = null;
 
 function _getSession() {
-  if (!_session) _session = new Soup.Session({ timeout: 15 });
+  if (!_session) {
+    _session = new Soup.Session({
+      timeout: 15,
+      user_agent: 'gnome-shell-crypto-tracker (+https://github.com/alipirpiran/Crypto-Price-Tracker-for-Gnome-Shell)',
+    });
+  }
   return _session;
 }
 
@@ -28,11 +33,14 @@ export function get(url) {
           // Soup.Status enum and throws on anything not in it, e.g. the 429
           // the price APIs return when they rate-limit us.
           let code = message.status_code;
+          let decoder = new TextDecoder('utf-8');
           if (code !== 200) {
-            reject(new Error(`HTTP ${code} for ${url}`));
+            let err = new Error(`HTTP ${code} for ${url}`);
+            err.status = code;
+            err.body = decoder.decode(bytes.get_data());
+            reject(err);
             return;
           }
-          let decoder = new TextDecoder('utf-8');
           resolve({
             code,
             body: decoder.decode(bytes.get_data()),

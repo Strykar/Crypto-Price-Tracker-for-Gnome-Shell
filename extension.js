@@ -97,7 +97,7 @@ const Indicator = GObject.registerClass(
     }
 
     _setCoinsFromSettings() {
-      let current_exchange = SourceClient.get_exchange();
+      let current_exchange = Settings.get_exchange();
       let _coins = Settings.getCoins();
 
       for (const c of this.coins) c.destroy();

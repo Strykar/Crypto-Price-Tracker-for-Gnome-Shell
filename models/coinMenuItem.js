@@ -1,4 +1,5 @@
 // noinspection DuplicatedCode
+import Gio from 'gi://Gio';
 import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -10,7 +11,6 @@ import * as Settings from '../settings.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 
 export let CoinMenuItem = GObject.registerClass(
   class CoinMenuItem extends PopupMenu.PopupBaseMenuItem {
@@ -120,13 +120,13 @@ export let CoinMenuItem = GObject.registerClass(
         active: this.activeCoin,
         title: this.title,
         exchange: this.exchange,
+        coingecko_id: this.coingecko_id,
       };
     }
     _getPrice() {
       let parts = this.symbol.split('/');
-      if (this.exchange === SourceClient.exchanges.coingecko) {
-        parts[0] = this.coingecko_id;
-      }
+      const src = SourceClient.getSource(this.exchange);
+      if (src?.id === 'coingecko') parts[0] = this.coingecko_id;
 
       return SourceClient.getPrice(parts[0], parts[1], this.exchange);
     }
@@ -247,17 +247,9 @@ export let CoinMenuItem = GObject.registerClass(
     }
 
     _openChart() {
-      let chartUrl = '';
-      try {
-        chartUrl = SourceClient.getChartUrl(
-          this.coingecko_id || this.symbol,
-          this.exchange,
-        );
-        Util.spawnCommandLine(`xdg-open ${chartUrl}`);
-      } catch (err) {
-        let title = _('Can not open %s').format(chartUrl);
-        Main.notifyError(title, err);
-      }
+      const chartUrl = SourceClient.getChartUrl(this._getJSON());
+      if (!chartUrl) return;
+      Gio.AppInfo.launch_default_for_uri(chartUrl, null);
     }
 
     destroy() {

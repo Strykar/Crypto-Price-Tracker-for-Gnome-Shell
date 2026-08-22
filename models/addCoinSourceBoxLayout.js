@@ -3,6 +3,7 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import * as SourceClient from '../api/sourceClient.js';
+import * as Settings from '../settings.js';
 
 export let AddCoinSourceBoxLayout = GObject.registerClass(
   class AddCoinSourceBoxLayout extends St.BoxLayout {
@@ -106,13 +107,13 @@ export let AddCoinSourceBoxLayout = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
         });
 
-        if (val === SourceClient.get_exchange()) {
+        if (val === Settings.get_exchange()) {
           btn.checked = true;
         }
 
         btn.connect('clicked', (self) => {
           this.addCoinMenuItem.current_exchange = val;
-          SourceClient.change_exchange(this.addCoinMenuItem.current_exchange);
+          Settings.change_exchange(this.addCoinMenuItem.current_exchange);
           btns.forEach((self) => {
             self.checked = false;
           });

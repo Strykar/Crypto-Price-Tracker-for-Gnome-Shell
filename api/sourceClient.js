@@ -1,95 +1,45 @@
-import * as Settings from '../settings.js';
+import { get } from './request.js';
+import { SOURCES, getSource } from './sources/index.js';
 
-import { BinanceClient } from './sources/binance.js';
-import { CoingeckoClient } from './sources/coingecko.js';
-import { CryptoClient } from './sources/crypto.js';
-import { OkxClient } from './sources/okx.js';
+export { SOURCES, getSource };
 
-export let current_exchange = '';
+export const exchanges = Object.fromEntries(SOURCES.map(s => [s.id, s.label]));
 
-export var exchanges = {
-  binance: 'Binance',
-  coingecko: 'Coingecko',
-  crypto: 'Crypto',
-  okx: 'OKX',
-};
+export async function fetchPrices(source, coins, fetchFn = get) {
+  if (!coins.length) return new Map();
 
-export var change_exchange = (exchange_name) => {
-  current_exchange = exchange_name;
-  Settings.change_exchange(exchange_name);
-};
-
-export let get_exchange = () => {
-  if (current_exchange !== '') return current_exchange;
-  current_exchange = Settings.get_exchange();
-  return current_exchange;
-};
-
-export let getPrice = async function (name, vol, exchange) {
-  let price;
-
-  switch (exchange) {
-    case exchanges.binance:
-      price = await BinanceClient._getPrice(name, vol);
-      break;
-    case exchanges.coingecko:
-      price = await CoingeckoClient._getPrice(name, vol);
-      break;
-    case exchanges.crypto:
-      price = await CryptoClient._getPrice(name, vol);
-      break;
-    case exchanges.okx:
-      price = await OkxClient._getPrice(name, vol);
-      break;
+  if (source.supportsBatch) {
+    const res = await fetchFn(source.buildUrl(coins));
+    return source.parsePrices(res.body, coins);
   }
 
-  let { maximumFractionDigits, minimumFractionDigits } = _fractionDigits(price);
+  const settled = await Promise.allSettled(
+    coins.map(async c => {
+      const res = await fetchFn(source.buildUrl([c]));
+      return source.parsePrices(res.body, [c]);
+    })
+  );
 
-  return price.toLocaleString('en-US', {
-    maximumFractionDigits,
-    minimumFractionDigits,
-  });
-};
-
-export let getChartUrl = (symbol, exchange) => {
-  switch (exchange) {
-    case exchanges.binance:
-      return BinanceClient._getChartUrl(symbol);
-
-    case exchanges.coingecko:
-      return CoingeckoClient._getChartUrl(symbol);
-
-    case exchanges.crypto:
-      return CryptoClient._getChartUrl(symbol);
-
-    case exchanges.okx:
-      return OkxClient._getChartUrl(symbol);
-
-    default:
-      return null;
+  const out = new Map();
+  for (const r of settled) {
+    if (r.status !== 'fulfilled') continue;
+    for (const [id, price] of r.value) out.set(id, price);
   }
-};
+  // If every coin failed, reject so PriceService retries.
+  if (coins.length && out.size === 0)
+    throw new Error(`${source.id}: all ${coins.length} request(s) failed`);
+  return out;
+}
 
-function _fractionDigits(price) {
-  let maximumFractionDigits = 0;
-  let minimumFractionDigits = 0;
+export function getChartUrl(coin) {
+  const source = getSource(coin.exchange);
+  return source ? source.chartUrl(coin) : null;
+}
 
-  if (price < 1000 && price >= 100) {
-    maximumFractionDigits = 1;
-    minimumFractionDigits = 1;
-  } else if (price < 100 && price >= 10) {
-    maximumFractionDigits = 2;
-    minimumFractionDigits = 2;
-  } else if (price < 10 && price >= 1) {
-    maximumFractionDigits = 3;
-    minimumFractionDigits = 3;
-  } else if (price < 1 && price >= 0.1) {
-    maximumFractionDigits = 4;
-    minimumFractionDigits = 4;
-  } else if (price < 0.1) {
-    maximumFractionDigits = 5;
-    minimumFractionDigits = 5;
-  }
-
-  return { maximumFractionDigits, minimumFractionDigits };
+export async function getPrice(name, vol, exchange) {
+  const source = getSource(exchange);
+  if (!source) return undefined;
+  const coin = { id: '_shim', symbol: `${name}/${vol}`, coingecko_id: name };
+  const prices = await fetchPrices(source, [coin]);
+  return prices.get('_shim');
 }

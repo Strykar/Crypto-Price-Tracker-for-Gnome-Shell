@@ -17,7 +17,7 @@ export let AddCoinMenuItem = GObject.registerClass(
         can_focus: false,
       });
       this.panelMenu = panelMenu;
-      this.current_exchange = SourceClient.get_exchange();
+      this.current_exchange = Settings.get_exchange();
       this.Me = Me;
 
       let vbox = new St.BoxLayout({
