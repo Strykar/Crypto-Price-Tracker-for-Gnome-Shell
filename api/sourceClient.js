@@ -33,12 +33,16 @@ export async function fetchPrices(source, coins, fetchFn = get) {
 
 export async function fetchHistory(source, coins, fetchFn = get) {
   if (!source.historyUrl || !source.parseHistory) return new Map();
-  const settled = await Promise.allSettled(
-    coins.map(async c => [c.id, source.parseHistory(await fetchFn(source.historyUrl(c)).then(r => r.body), c)])
-  );
+  const settled = await Promise.allSettled(coins.map(async c => {
+    const body = await fetchFn(source.historyUrl(c)).then(r => r.body);
+    return [c.id, {
+      prices: source.parseHistory(body, c),
+      flow: source.parseFlow ? source.parseFlow(body, c) : null,
+    }];
+  }));
   const out = new Map();
   for (const r of settled)
-    if (r.status === 'fulfilled' && r.value[1]?.length) out.set(r.value[0], r.value[1]);
+    if (r.status === 'fulfilled' && r.value[1].prices?.length) out.set(r.value[0], r.value[1]);
   return out;
 }
 

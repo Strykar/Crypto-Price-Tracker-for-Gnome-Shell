@@ -16,3 +16,31 @@ test('formatPrice: rejects non-finite with a dash', () => {
   assertEqual(formatPrice(undefined), '-');
   assertEqual(formatPrice(null), '-');
 });
+
+test('formatPrice: separators are configurable', () => {
+  const v = 1234567.891;
+  assertEqual(formatPrice(v, { separator: 'comma-dot', decimals: 2 }), '1,234,567.89');
+  assertEqual(formatPrice(v, { separator: 'dot-comma', decimals: 2 }), '1.234.567,89');
+  assertEqual(formatPrice(v, { separator: 'space-dot', decimals: 2 }), '1 234 567.89');
+  assertEqual(formatPrice(v, { separator: 'space-comma', decimals: 2 }), '1 234 567,89');
+  assertEqual(formatPrice(v, { separator: 'none-dot', decimals: 2 }), '1234567.89');
+});
+
+test('formatPrice: a fixed decimal count overrides the magnitude rule', () => {
+  assertEqual(formatPrice(77026.65, { decimals: 2 }), '77,026.65');
+  assertEqual(formatPrice(77026.65, { decimals: 0 }), '77,027');
+  assertEqual(formatPrice(0.012345, { decimals: 8 }), '0.01234500');
+});
+
+test('formatPrice: decimals -1 means the same as not asking', () => {
+  for (const v of [77026.65, 93.38, 0.012345])
+    assertEqual(formatPrice(v, { decimals: -1 }), formatPrice(v), `formatPrice(${v})`);
+});
+
+test('formatPrice: negatives keep their sign and grouping', () => {
+  assertEqual(formatPrice(-1234.5, { decimals: 1 }), '-1,234.5');
+});
+
+test('formatPrice: an unknown separator falls back rather than throwing', () => {
+  assertEqual(formatPrice(1234.5, { separator: 'nonsense', decimals: 1 }), '1,234.5');
+});

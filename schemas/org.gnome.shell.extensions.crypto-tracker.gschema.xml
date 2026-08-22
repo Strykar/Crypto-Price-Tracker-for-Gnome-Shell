@@ -27,14 +27,22 @@
       <summary>Fiat currency the portfolio total is shown in</summary>
       <description>Empty means not yet configured; the portfolio shows a picker.</description>
     </key>
-    <key type="b" name="portfolio-view">
-      <default>false</default>
-      <summary>Show holdings and a total instead of plain prices</summary>
-    </key>
     <key type="s" name="dropdown-view">
       <default>'prices'</default>
       <summary>Which dropdown view to show</summary>
       <description>prices, both, or portfolio</description>
+    </key>
+    <key type="s" name="number-separator">
+      <default>'comma-dot'</default>
+      <summary>Group and decimal separator style</summary>
+    </key>
+    <key type="i" name="decimal-places">
+      <default>-1</default>
+      <summary>Decimal places, or -1 to choose by magnitude</summary>
+    </key>
+    <key type="s" name="exchange-filter">
+      <default>'coingecko'</default>
+      <summary>Which source a newly added pair should use</summary>
     </key>
   </schema>
 </schemalist>

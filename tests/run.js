@@ -21,4 +21,6 @@ import './portfolio.test.js';
 
 import './history.test.js';
 
+import './search.test.js';
+
 System.exit(await run());

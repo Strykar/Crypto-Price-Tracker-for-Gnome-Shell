@@ -28,7 +28,6 @@ import * as CryptoUtil from './utils/cryptoUtil.js';
 import * as Settings from './settings.js';
 import { CoinMenuItem } from './models/coinMenuItem.js';
 import { AddCoinMenuItem } from './models/addCoinMenuItem.js';
-import { ToggleRow } from './models/toggleRow.js';
 import { PanelBox } from './models/panelBox.js';
 import { PriceService } from './lib/priceService.js';
 import { formatPrice } from './lib/format.js';
@@ -38,6 +37,14 @@ import { Sparkline } from './lib/sparkline.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+
+function buildCurrencyHint() {
+  return new St.Label({
+    text: 'Set a portfolio currency in preferences, and add a pair quoted ' +
+          'in it, for example BTC/USD.',
+    style_class: 'crypto-picker-hint',
+  });
+}
 
 const Indicator = GObject.registerClass(
   class Indicator extends PanelMenu.Button {
@@ -84,25 +91,6 @@ const Indicator = GObject.registerClass(
     }
 
     _buildAddCoinSection(Me) {
-      this.toggleRow = new ToggleRow(
-        (on) => {
-          Me._settings.set_boolean('portfolio-view', on);
-          Me._applyPortfolio();
-        },
-        (currency) => {
-          Me._settings.set_string('base-currency', currency);
-          Me._applyPortfolio();
-        },
-      );
-      const toggleRowItem = new PopupMenu.PopupBaseMenuItem({
-        hover: false,
-        can_focus: false,
-        activate: false,
-        reactive: false,
-      });
-      toggleRowItem.add_child(this.toggleRow);
-      this.menu.addMenuItem(toggleRowItem);
-      this._toggleRowItem = toggleRowItem;
 
       this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -115,13 +103,12 @@ const Indicator = GObject.registerClass(
     }
 
     updateTotal(on, currency, priceService) {
-      this.toggleRow.setPortfolioActive(on);
       this._portfolioRow.remove_all_children();
       this._portfolioRow.visible = on;
       if (!on) return;
 
       if (!currency || !availableCurrencies(this.coins).includes(currency)) {
-        this._portfolioRow.add_child(this.toggleRow.buildPicker(this.coins));
+        this._portfolioRow.add_child(buildCurrencyHint());
         return;
       }
 
@@ -196,19 +183,21 @@ export default class Extension extends Ex {
     this._indicator = new Indicator(this.metadata);
 
     const applyPortfolio = () => {
-      const mode = this._settings.get_string('dropdown-view');
-      const on = mode === 'portfolio' ||
-                 (mode === 'both' && this._settings.get_boolean('portfolio-view'));
-      this._indicator._toggleRowItem.visible = mode === 'both';
+      const on = this._settings.get_string('dropdown-view') === 'portfolio';
       const currency = this._settings.get_string('base-currency');
       for (const coin of this._indicator.coins) coin.setPortfolioView(on, currency);
       this._indicator.updateTotal(on, currency, this._priceService);
     };
     this._applyPortfolio = applyPortfolio;
 
+    const fmtOpts = () => ({
+      separator: this._settings.get_string('number-separator'),
+      decimals: this._settings.get_int('decimal-places'),
+    });
+
     const refreshPanel = () => {
       this._indicator.panelBox.setCoins(this._indicator.coins);
-      this._indicator.panelBox.update(this._priceService);
+      this._indicator.panelBox.update(this._priceService, fmtOpts());
       applyPortfolio();
     };
     this._indicator.onCoinsChanged = refreshPanel;
@@ -218,9 +207,10 @@ export default class Extension extends Ex {
 
     const redraw = () => {
       const style = this._settings.get_string('chart-style');
+      const fmt = fmtOpts();
       for (const coin of this._indicator.coins)
-        coin.onPricesUpdated(this._priceService, style);
-      this._indicator.panelBox.update(this._priceService);
+        coin.onPricesUpdated(this._priceService, style, fmt);
+      this._indicator.panelBox.update(this._priceService, fmt);
       applyPortfolio();
     };
     this._redraw = redraw;
@@ -229,6 +219,8 @@ export default class Extension extends Ex {
       this._settings.connect('changed::dropdown-view', () => this._redraw()),
       this._settings.connect('changed::chart-style', () => this._redraw()),
       this._settings.connect('changed::base-currency', () => this._redraw()),
+      this._settings.connect('changed::number-separator', () => this._redraw()),
+      this._settings.connect('changed::decimal-places', () => this._redraw()),
       // PriceService reads the interval once, so restart it.
       this._settings.connect('changed::refresh-interval', () => {
         this._priceService.stop();

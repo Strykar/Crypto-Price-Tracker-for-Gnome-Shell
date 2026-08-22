@@ -141,13 +141,16 @@ export let CoinMenuItem = GObject.registerClass(
         amount: this.amount,
       };
     }
-    onPricesUpdated(priceService, chartStyle) {
+    onPricesUpdated(priceService, chartStyle, fmt) {
       if (this._destroyed) return;
       const price = priceService.getPrice(this.id);
       this.nameLbl.text = `${this.title || this.symbol}`;
-      this.priceLbl.text = formatPrice(price);
+      this.priceLbl.text = formatPrice(price, fmt);
       this.sparkline.setRendererId(chartStyle);
-      this.sparkline.setSeries(priceService.getRing(this.id));
+      const wantsFlow = Sparkline.seriesKind(chartStyle) === 'flow';
+      const flow = wantsFlow ? priceService.getFlow(this.id) : null;
+      this.sparkline.setSeries(flow ?? priceService.getRing(this.id));
+      if (wantsFlow && !flow) this.sparkline.setRendererId('gradient-fill');
     }
     get state() {
       return this._switch.state;

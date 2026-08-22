@@ -55,6 +55,15 @@ export const BinanceSource = {
     return sortedCloses(rows.map(r => [Number(r[0]), Number(r[4])]));
   },
 
+  parseFlow(body) {
+    const rows = JSON.parse(body);
+    if (!Array.isArray(rows)) throw new Error('binance: flow was not an array');
+    return sortedCloses(rows.map(r => {
+      const vol = Number(r[5]), buy = Number(r[9]);
+      return [Number(r[0]), vol > 0 ? (buy / vol) * 100 : 50];
+    }));
+  },
+
   chartUrl(coin) {
     const pair = coin.symbol.replace('/', '_').toUpperCase();
     return `https://www.binance.com/en/trade/${pair}`;

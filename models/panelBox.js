@@ -36,10 +36,10 @@ export const PanelBox = GObject.registerClass(
       }
     }
 
-    update(priceService) {
+    update(priceService, fmt) {
       for (const [coinId, { label, name }] of this._labels) {
         const price = priceService.getPrice(coinId);
-        label.text = `${name} ${formatPrice(price)}`;
+        label.text = `${name} ${formatPrice(price, fmt)}`;
       }
     }
   }
