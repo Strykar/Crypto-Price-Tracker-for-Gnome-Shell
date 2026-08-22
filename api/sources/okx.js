@@ -5,6 +5,8 @@ export const OkxSource = {
   icon: 'okx',
   assetClass: 'crypto',
 
+  example: 'BTC/USDT',
+
   minPollInterval: 5,
   // The all-tickers endpoint is 437KB; per-coin requests win until ~1189 coins.
   supportsBatch: false,

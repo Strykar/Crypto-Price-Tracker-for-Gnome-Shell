@@ -6,6 +6,8 @@ export const CoingeckoSource = {
   assetClass: 'crypto',
 
   // Free tier allows roughly 10-30 requests a minute.
+  example: 'BTC/USD',
+
   minPollInterval: 15,
   supportsBatch: true,
 

@@ -7,40 +7,59 @@ import { formatPrice } from '../lib/format.js';
 export const PanelBox = GObject.registerClass(
   class PanelBox extends St.BoxLayout {
     constructor() {
-      super({ y_align: Clutter.ActorAlign.CENTER });
-      this._labels = new Map();   // coinId -> {label, name}
+      super({ y_align: Clutter.ActorAlign.CENTER, style_class: 'crypto-panel' });
+      this._entries = new Map();   // coinId -> {group, ticker, price, name}
       this._fallback = new St.Label({
         text: '₿',
         y_align: Clutter.ActorAlign.CENTER,
-        style_class: 'menu-item-text',
+        style_class: 'crypto-panel-fallback',
       });
       this.add_child(this._fallback);
     }
 
     setCoins(coins) {
-      for (const { label } of this._labels.values()) label.destroy();
-      this._labels.clear();
+      for (const { group } of this._entries.values()) group.destroy();
+      this._entries.clear();
 
       const active = coins.filter(c => c.activeCoin);
       this._fallback.visible = active.length === 0;
 
-      for (const coin of active) {
-        const name = coin.title || coin.symbol;
-        const label = new St.Label({
-          text: `${name} ...`,
+      active.forEach((coin, i) => {
+        const group = new St.BoxLayout({
           y_align: Clutter.ActorAlign.CENTER,
-          style_class: 'menu-item-text',
+          style_class: 'crypto-panel-coin',
         });
-        this.add_child(label);
-        this._labels.set(coin.id, { label, name });
-      }
+
+        if (i > 0) {
+          group.add_child(new St.Label({
+            text: '·',
+            y_align: Clutter.ActorAlign.CENTER,
+            style_class: 'crypto-panel-sep',
+          }));
+        }
+
+        const name = coin.title || coin.symbol;
+        const ticker = new St.Label({
+          text: name,
+          y_align: Clutter.ActorAlign.CENTER,
+          style_class: 'crypto-panel-ticker',
+        });
+        const price = new St.Label({
+          text: '…',
+          y_align: Clutter.ActorAlign.CENTER,
+          style_class: 'crypto-panel-price',
+        });
+
+        group.add_child(ticker);
+        group.add_child(price);
+        this.add_child(group);
+        this._entries.set(coin.id, { group, ticker, price, name });
+      });
     }
 
     update(priceService, fmt) {
-      for (const [coinId, { label, name }] of this._labels) {
-        const price = priceService.getPrice(coinId);
-        label.text = `${name} ${formatPrice(price, fmt)}`;
-      }
+      for (const [coinId, entry] of this._entries)
+        entry.price.text = formatPrice(priceService.getPrice(coinId), fmt);
     }
   }
 );

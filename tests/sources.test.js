@@ -112,3 +112,11 @@ test('okx and crypto do not claim batch support', () => {
   assertEqual(getSource('okx').supportsBatch, false);
   assertEqual(getSource('crypto').supportsBatch, false);
 });
+
+for (const src of SOURCES) {
+  test(`${src.id}: the add-pair example matches its captured sample`, () => {
+    assertEqual(typeof src.example, 'string', `${src.id} must declare an example`);
+    assertEqual(src.sample.coins.some(c => c.symbol === src.example), true,
+      `${src.id} example "${src.example}" is not among its sample coins`);
+  });
+}

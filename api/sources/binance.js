@@ -5,6 +5,8 @@ export const BinanceSource = {
   icon: 'binance',
   assetClass: 'crypto',
 
+  example: 'BTC/USDT',
+
   minPollInterval: 5,
   supportsBatch: true,
 

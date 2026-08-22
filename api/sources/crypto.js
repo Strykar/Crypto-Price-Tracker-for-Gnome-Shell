@@ -5,6 +5,8 @@ export const CryptoSource = {
   icon: 'crypto',
   assetClass: 'crypto',
 
+  example: 'BTC/USDT',
+
   minPollInterval: 5,
   // "All tickers" is 151KB measured, against 236 bytes per coin.
   supportsBatch: false,

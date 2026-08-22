@@ -113,6 +113,7 @@ export let AddCoinSourceBoxLayout = GObject.registerClass(
 
         btn.connect('clicked', (self) => {
           this.addCoinMenuItem.current_exchange = val;
+          this.addCoinMenuItem.setExample?.(val);
           Settings.change_exchange(this.addCoinMenuItem.current_exchange);
           btns.forEach((self) => {
             self.checked = false;

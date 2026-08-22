@@ -36,12 +36,13 @@ export let AddCoinMenuItem = GObject.registerClass(
 
       let coinSymbol = new St.Entry({
         name: 'symbol',
-        hint_text: 'Symbol/Vol     ',
+        hint_text: SourceClient.getSource(this.current_exchange)?.example ?? 'BTC/USDT',
         can_focus: true,
         x_expand: true,
         style_class: 'crypto-input',
       });
       hbox.add_child(coinSymbol);
+      this._symbolEntry = coinSymbol;
 
       let coinTitle = new St.Entry({
         name: 'title',
@@ -65,6 +66,11 @@ export let AddCoinMenuItem = GObject.registerClass(
         this._addCoin.bind(this, coinSymbol, coinTitle)
       );
       hbox.add_child(addBtn);
+    }
+
+    setExample(exchangeId) {
+      const src = SourceClient.getSource(exchangeId);
+      if (this._symbolEntry && src?.example) this._symbolEntry.hint_text = src.example;
     }
 
     async _addCoin(coinSymbol, coinTitle) {
