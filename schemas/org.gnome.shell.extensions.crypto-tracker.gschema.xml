@@ -22,5 +22,14 @@
       <default>'gradient-fill'</default>
       <summary>Sparkline renderer id</summary>
     </key>
+    <key type="s" name="base-currency">
+      <default>''</default>
+      <summary>Fiat currency the portfolio total is shown in</summary>
+      <description>Empty means not yet configured; the portfolio shows a picker.</description>
+    </key>
+    <key type="b" name="portfolio-view">
+      <default>false</default>
+      <summary>Show holdings and a total instead of plain prices</summary>
+    </key>
   </schema>
 </schemalist>

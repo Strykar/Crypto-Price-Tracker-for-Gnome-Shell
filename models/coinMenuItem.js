@@ -9,6 +9,7 @@ import * as SourceClient from '../api/sourceClient.js';
 import * as Settings from '../settings.js';
 import { formatPrice } from '../lib/format.js';
 import { Sparkline } from '../lib/sparkline.js';
+import { quoteOf } from '../lib/portfolio.js';
 
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -28,6 +29,7 @@ export let CoinMenuItem = GObject.registerClass(
       this.activeCoin = coin.active;
       this.title = coin.title;
       this.exchange = coin.exchange;
+      this.amount = coin.amount ?? 0;
       this.coins = coins;
       this.panelMenu = panelMenu;
 
@@ -55,6 +57,22 @@ export let CoinMenuItem = GObject.registerClass(
       });
       this.add_child(this.nameLbl);
 
+      this.amountEntry = new St.Entry({
+        style_class: 'crypto-amount',
+        can_focus: true,
+        visible: false,
+      });
+      this.amountEntry.clutter_text.connect('activate', () => {
+        const value = parseFloat(this.amountEntry.text);
+        if (!isFinite(value) || value < 0) {
+          this.amountEntry.text = String(this.amount ?? '');
+          return;
+        }
+        this.amount = value;
+        Settings.setCoinAmount(this.id, value);
+        this.onChanged?.();
+      });
+      this.add_child(this.amountEntry);
 
       this.sparkline = new Sparkline();
       this.add_child(this.sparkline);
@@ -120,6 +138,7 @@ export let CoinMenuItem = GObject.registerClass(
         title: this.title,
         exchange: this.exchange,
         coingecko_id: this.coingecko_id,
+        amount: this.amount,
       };
     }
     onPricesUpdated(priceService, chartStyle) {
@@ -138,6 +157,13 @@ export let CoinMenuItem = GObject.registerClass(
       this.checkAccessibleState();
     }
 
+    setPortfolioView(on, currency) {
+      const eligible = on && quoteOf(this) === currency;
+      this.amountEntry.visible = eligible;
+      // Runs every tick, so leave the entry alone while the user is typing.
+      const editing = this.amountEntry.clutter_text?.has_key_focus?.();
+      if (eligible && !editing) this.amountEntry.text = String(this.amount ?? 0);
+    }
 
     activate(event) {
       if (this._switch.mapped) return;

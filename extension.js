@@ -28,9 +28,11 @@ import * as CryptoUtil from './utils/cryptoUtil.js';
 import * as Settings from './settings.js';
 import { CoinMenuItem } from './models/coinMenuItem.js';
 import { AddCoinMenuItem } from './models/addCoinMenuItem.js';
+import { ToggleRow } from './models/toggleRow.js';
 import { PanelBox } from './models/panelBox.js';
 import { PriceService } from './lib/priceService.js';
 import { formatPrice } from './lib/format.js';
+import { availableCurrencies, total, totalSeries } from './lib/portfolio.js';
 import { Sparkline } from './lib/sparkline.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -71,9 +73,35 @@ const Indicator = GObject.registerClass(
       this._coinsScrollview.add_child(this.coinsScrollViewVbox);
       baseMenuItem.add_child(this._coinsScrollview);
 
+      this._portfolioRow = new PopupMenu.PopupBaseMenuItem({
+        hover: false,
+        can_focus: false,
+        activate: false,
+        reactive: false,
+      });
+      this._portfolioRow.visible = false;
+      this.coinSection.addMenuItem(this._portfolioRow);
     }
 
     _buildAddCoinSection(Me) {
+      this.toggleRow = new ToggleRow(
+        (on) => {
+          Me._settings.set_boolean('portfolio-view', on);
+          Me._applyPortfolio();
+        },
+        (currency) => {
+          Me._settings.set_string('base-currency', currency);
+          Me._applyPortfolio();
+        },
+      );
+      const toggleRowItem = new PopupMenu.PopupBaseMenuItem({
+        hover: false,
+        can_focus: false,
+        activate: false,
+        reactive: false,
+      });
+      toggleRowItem.add_child(this.toggleRow);
+      this.menu.addMenuItem(toggleRowItem);
 
       this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -83,6 +111,36 @@ const Indicator = GObject.registerClass(
 
       let addCoinSubMenu = new AddCoinMenuItem(this, Me);
       addCoinBtnMenu.menu.addMenuItem(addCoinSubMenu);
+    }
+
+    updateTotal(on, currency, priceService) {
+      this.toggleRow.setPortfolioActive(on);
+      this._portfolioRow.remove_all_children();
+      this._portfolioRow.visible = on;
+      if (!on) return;
+
+      if (!currency || !availableCurrencies(this.coins).includes(currency)) {
+        this._portfolioRow.add_child(this.toggleRow.buildPicker(this.coins));
+        return;
+      }
+
+      const row = new St.BoxLayout({ x_expand: true });
+
+      const sparkline = new Sparkline();
+      sparkline.setSeries(totalSeries(this.coins, currency, priceService));
+      row.add_child(sparkline);
+
+      const expander = new St.Bin({ x_expand: true });
+      row.add_child(expander);
+
+      const totalLbl = new St.Label({
+        text: formatPrice(total(this.coins, currency, priceService)),
+        style_class: 'itemLabel text-align-right',
+        y_align: Clutter.ActorAlign.CENTER,
+      });
+      row.add_child(totalLbl);
+
+      this._portfolioRow.add_child(row);
     }
 
     _buildCoinsSection() {
@@ -136,9 +194,18 @@ export default class Extension extends Ex {
 
     this._indicator = new Indicator(this.metadata);
 
+    const applyPortfolio = () => {
+      const on = this._settings.get_boolean('portfolio-view');
+      const currency = this._settings.get_string('base-currency');
+      for (const coin of this._indicator.coins) coin.setPortfolioView(on, currency);
+      this._indicator.updateTotal(on, currency, this._priceService);
+    };
+    this._applyPortfolio = applyPortfolio;
+
     const refreshPanel = () => {
       this._indicator.panelBox.setCoins(this._indicator.coins);
       this._indicator.panelBox.update(this._priceService);
+      applyPortfolio();
     };
     this._indicator.onCoinsChanged = refreshPanel;
 
@@ -150,6 +217,7 @@ export default class Extension extends Ex {
       for (const coin of this._indicator.coins)
         coin.onPricesUpdated(this._priceService, style);
       this._indicator.panelBox.update(this._priceService);
+      applyPortfolio();
     });
     this._priceService.start();
 
@@ -163,6 +231,7 @@ export default class Extension extends Ex {
       for (const c of this._indicator.coins) c.destroy();
     this._indicator?.destroy();
     this._indicator = null;
+    this._applyPortfolio = null;
     this._settings = null;
     CryptoUtil.destroy();
     Request.destroy();

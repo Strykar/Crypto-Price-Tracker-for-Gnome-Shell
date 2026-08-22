@@ -17,4 +17,6 @@ import './priceService.test.js';
 
 import './renderers.test.js';
 
+import './portfolio.test.js';
+
 System.exit(await run());

@@ -27,6 +27,7 @@ An extension for Gnome-Shell to track price of Crypto currencies.
 * A chart per pair in the dropdown
 * Sources: Binance, OKX, Coingecko, Crypto.com
 * [Display multiple coins](#display-multiple-coins)
+* A portfolio view totalling what you hold, in one currency you pick
 
 ## Installation
 
