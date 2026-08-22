@@ -2,6 +2,7 @@ import cairo from 'gi://cairo';
 import GLib from 'gi://GLib';
 import { test, assertEqual } from './harness.js';
 import { RENDERERS, getRenderer, DEFAULT_RENDERER_ID } from '../lib/renderers/index.js';
+import { direction } from '../lib/renderers/gradientFill.js';
 
 const CTX = { up: [0.18, 0.76, 0.44], down: [0.91, 0.30, 0.33], flat: [0.58, 0.60, 0.63] };
 const RISING = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -76,4 +77,16 @@ test('registry: default renderer resolves', () => {
 
 test('registry: unknown id falls back to the default', () => {
   assertEqual(getRenderer('nonsense').id, DEFAULT_RENDERER_ID);
+});
+
+test('direction: a real 48-minute move is coloured, not flat', () => {
+  const ctx = { up: 'UP', down: 'DOWN', flat: 'FLAT' };
+  assertEqual(direction([100, 100.2], ctx), 'UP', '+0.2% must read as up');
+  assertEqual(direction([100, 99.8], ctx), 'DOWN', '-0.2% must read as down');
+});
+
+test('direction: flat means genuinely unmoved', () => {
+  const ctx = { up: 'UP', down: 'DOWN', flat: 'FLAT' };
+  assertEqual(direction([100, 100], ctx), 'FLAT');
+  assertEqual(direction([100, 100.01], ctx), 'FLAT', '0.01% is noise, not a move');
 });
