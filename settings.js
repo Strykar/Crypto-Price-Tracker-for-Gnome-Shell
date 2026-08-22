@@ -1,18 +1,31 @@
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
+import { migrateCoins } from './lib/migrate.js';
+import { isDuplicateCoin } from './lib/duplicateCoin.js';
+
+let _settingsCache = null;
 
 function _getSettings() {
-  let extensionObject = Extension.lookupByUUID('crypto@alipirpiran.github');
+  if (!_settingsCache) {
+    const extensionObject = Extension.lookupByUUID('crypto@alipirpiran.github');
+    _settingsCache = extensionObject.getSettings();
+  }
+  return _settingsCache;
+}
 
-  return extensionObject.getSettings();
+export function destroy() {
+  _settingsCache = null;
 }
 
 export let getCoins = function () {
   const settings = _getSettings();
-
-  let coinJsonStr = String(settings.get_string('coins'));
-  let coinJson = JSON.parse(coinJsonStr);
-  return coinJson.coins;
+  const coinJson = JSON.parse(String(settings.get_string('coins')));
+  const { coins, changed } = migrateCoins(coinJson.coins ?? []);
+  if (changed) {
+    coinJson.coins = coins;
+    settings.set_string('coins', JSON.stringify(coinJson));
+  }
+  return coins;
 };
 
 export let addCoin = function ({
@@ -43,15 +56,7 @@ export let addCoin = function ({
 };
 
 function _checkIsDuplicate(coin) {
-  let coins = getCoins();
-  for (const _coin of coins)
-    if (
-      coin.symbol.toUpperCase() === _coin.symbol &&
-      coin.exchange === _coin.exchange
-    )
-      return true;
-
-  return false;
+  return isDuplicateCoin(coin, getCoins());
 }
 
 export let delCoin = function ({ id }) {
@@ -93,6 +98,13 @@ export let updateCoin = function (coin) {
     }
   }
 
+  setCoins(coins);
+};
+
+export let setCoinAmount = function (id, amount) {
+  const coins = getCoins();
+  for (const coin of coins)
+    if (coin.id === id) coin.amount = amount;
   setCoins(coins);
 };
 

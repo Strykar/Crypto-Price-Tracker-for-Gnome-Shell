@@ -7,4 +7,8 @@ import './sources.test.js';
 
 import './sourceClient.test.js';
 
+import './migrate.test.js';
+
+import './duplicateCoin.test.js';
+
 System.exit(await run());

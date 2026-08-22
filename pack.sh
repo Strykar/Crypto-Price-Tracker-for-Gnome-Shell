@@ -2,6 +2,7 @@
 gnome-extensions pack -f \
   --extra-source=api \
   --extra-source=assets \
+  --extra-source=lib \
   --extra-source=models \
   --extra-source=utils \
   --extra-source=settings.js \
