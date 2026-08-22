@@ -1,5 +1,5 @@
 import { test, assertEqual } from './harness.js';
-import { formatPrice } from '../lib/format.js';
+import { formatPrice, panelSeparator } from '../lib/format.js';
 
 test('formatPrice: decimal count follows the magnitude', () => {
   for (const [input, expected] of [
@@ -43,4 +43,15 @@ test('formatPrice: negatives keep their sign and grouping', () => {
 
 test('formatPrice: an unknown separator falls back rather than throwing', () => {
   assertEqual(formatPrice(1234.5, { separator: 'nonsense', decimals: 1 }), '1,234.5');
+});
+
+test('panelSeparator returns the chosen mark', () => {
+  assertEqual(panelSeparator('dot'), '·');
+  assertEqual(panelSeparator('pipe'), '|');
+  assertEqual(panelSeparator('none'), '');
+});
+
+test('panelSeparator falls back rather than throwing on an unknown id', () => {
+  assertEqual(panelSeparator('nonsense'), '·');
+  assertEqual(panelSeparator(undefined), '·');
 });

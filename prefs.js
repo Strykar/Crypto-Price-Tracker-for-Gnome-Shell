@@ -7,7 +7,7 @@ import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/
 
 import { FIAT } from './lib/portfolio.js';
 import { RENDERERS } from './lib/renderers/index.js';
-import { SEPARATORS } from './lib/format.js';
+import { SEPARATORS, PANEL_SEPARATORS } from './lib/format.js';
 import { fuzzySearch } from './lib/search.js';
 
 const VIEWS = [['prices', 'Prices'], ['portfolio', 'Portfolio']];
@@ -66,6 +66,10 @@ export default class CryptoPrefs extends ExtensionPreferences {
     num.add(comboRow('Separators', null,
                      Object.entries(SEPARATORS).map(([k, v]) => [k, v.label]),
                      ...str('number-separator')));
+    num.add(comboRow('Panel separator',
+                     'Shown between coins in the top bar',
+                     Object.entries(PANEL_SEPARATORS).map(([k, v]) => [k, v.label]),
+                     ...str('panel-separator')));
     num.add(comboRow('Decimal places',
                      'Automatic varies the count with the size of the number',
                      DECIMALS,

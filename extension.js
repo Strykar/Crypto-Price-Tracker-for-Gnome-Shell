@@ -197,7 +197,8 @@ export default class Extension extends Ex {
 
     const refreshPanel = () => {
       this._indicator.panelBox.setCoins(this._indicator.coins);
-      this._indicator.panelBox.update(this._priceService, fmtOpts());
+      this._indicator.panelBox.update(this._priceService, fmtOpts(),
+        this._settings.get_string('panel-separator'));
       applyPortfolio();
     };
     this._indicator.onCoinsChanged = refreshPanel;
@@ -210,7 +211,8 @@ export default class Extension extends Ex {
       const fmt = fmtOpts();
       for (const coin of this._indicator.coins)
         coin.onPricesUpdated(this._priceService, style, fmt);
-      this._indicator.panelBox.update(this._priceService, fmt);
+      this._indicator.panelBox.update(this._priceService, fmt,
+        this._settings.get_string('panel-separator'));
       applyPortfolio();
     };
     this._redraw = redraw;
@@ -221,6 +223,7 @@ export default class Extension extends Ex {
       this._settings.connect('changed::base-currency', () => this._redraw()),
       this._settings.connect('changed::number-separator', () => this._redraw()),
       this._settings.connect('changed::decimal-places', () => this._redraw()),
+      this._settings.connect('changed::panel-separator', () => this._redraw()),
       // PriceService reads the interval once, so restart it.
       this._settings.connect('changed::refresh-interval', () => {
         this._priceService.stop();

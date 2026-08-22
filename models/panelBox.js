@@ -2,13 +2,14 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
-import { formatPrice } from '../lib/format.js';
+import { formatPrice, panelSeparator } from '../lib/format.js';
 
 export const PanelBox = GObject.registerClass(
   class PanelBox extends St.BoxLayout {
     constructor() {
       super({ y_align: Clutter.ActorAlign.CENTER, style_class: 'crypto-panel' });
       this._entries = new Map();   // coinId -> {group, ticker, price, name}
+      this._seps = [];
       this._fallback = new St.Label({
         text: '₿',
         y_align: Clutter.ActorAlign.CENTER,
@@ -20,6 +21,7 @@ export const PanelBox = GObject.registerClass(
     setCoins(coins) {
       for (const { group } of this._entries.values()) group.destroy();
       this._entries.clear();
+      this._seps = [];
 
       const active = coins.filter(c => c.activeCoin);
       this._fallback.visible = active.length === 0;
@@ -31,11 +33,13 @@ export const PanelBox = GObject.registerClass(
         });
 
         if (i > 0) {
-          group.add_child(new St.Label({
-            text: '·',
+          const sep = new St.Label({
+            text: '',
             y_align: Clutter.ActorAlign.CENTER,
             style_class: 'crypto-panel-sep',
-          }));
+          });
+          group.add_child(sep);
+          this._seps.push(sep);
         }
 
         const name = coin.title || coin.symbol;
@@ -57,7 +61,13 @@ export const PanelBox = GObject.registerClass(
       });
     }
 
-    update(priceService, fmt) {
+    update(priceService, fmt, separatorId) {
+      const sep = panelSeparator(separatorId);
+      for (const label of this._seps) {
+        label.text = sep;
+        // A space-only separator would otherwise leave its padding behind.
+        label.visible = sep !== '';
+      }
       for (const [coinId, entry] of this._entries)
         entry.price.text = formatPrice(priceService.getPrice(coinId), fmt);
     }
