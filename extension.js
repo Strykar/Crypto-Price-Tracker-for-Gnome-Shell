@@ -102,6 +102,7 @@ const Indicator = GObject.registerClass(
       });
       toggleRowItem.add_child(this.toggleRow);
       this.menu.addMenuItem(toggleRowItem);
+      this._toggleRowItem = toggleRowItem;
 
       this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
@@ -195,7 +196,10 @@ export default class Extension extends Ex {
     this._indicator = new Indicator(this.metadata);
 
     const applyPortfolio = () => {
-      const on = this._settings.get_boolean('portfolio-view');
+      const mode = this._settings.get_string('dropdown-view');
+      const on = mode === 'portfolio' ||
+                 (mode === 'both' && this._settings.get_boolean('portfolio-view'));
+      this._indicator._toggleRowItem.visible = mode === 'both';
       const currency = this._settings.get_string('base-currency');
       for (const coin of this._indicator.coins) coin.setPortfolioView(on, currency);
       this._indicator.updateTotal(on, currency, this._priceService);
@@ -219,6 +223,7 @@ export default class Extension extends Ex {
       this._indicator.panelBox.update(this._priceService);
       applyPortfolio();
     });
+    this._viewChangedId = this._settings.connect('changed::dropdown-view', applyPortfolio);
     this._priceService.start();
 
     Main.panel.addToStatusArea(this.uuid, this._indicator);
@@ -231,6 +236,10 @@ export default class Extension extends Ex {
       for (const c of this._indicator.coins) c.destroy();
     this._indicator?.destroy();
     this._indicator = null;
+    if (this._viewChangedId) {
+      this._settings.disconnect(this._viewChangedId);
+      this._viewChangedId = 0;
+    }
     this._applyPortfolio = null;
     this._settings = null;
     CryptoUtil.destroy();

@@ -28,6 +28,7 @@ An extension for Gnome-Shell to track price of Crypto currencies.
 * Sources: Binance, OKX, Coingecko, Crypto.com
 * [Display multiple coins](#display-multiple-coins)
 * A portfolio view totalling what you hold, in one currency you pick
+* [Preferences](#preferences): find a pair by typing, reorder them, choose chart and number formats
 
 ## Installation
 
@@ -62,6 +63,22 @@ Activate multiple coins from the menu and display them all in the top bar.
 <img src="https://github.com/alipirpiran/Crypto-Price-Tracker-for-Gnome-Shell/raw/screenshots/multicoin.gif">
 
 Thanks to [azorpax](https://github.com/azorpax) for creating this feature. [Pull request](https://github.com/alipirpiran/Crypto-Price-Tracker-for-Gnome-Shell/pull/10#issue-1351086191)
+
+## Preferences
+
+Open it from the extensions app, or from the gear on the portfolio heading.
+
+Add a pair by typing a ticker or a name: the list of coins is bundled, so it
+searches offline, ranks exact tickers first and pushes bridged and wrapped
+copies down. Pick where to price it and each source shows an example of a pair
+it accepts.
+
+Your pairs can be dragged into the order they appear in the top bar, and each
+one carries how much of it you hold.
+
+The rest is display: which chart to draw, what separates thousands and
+decimals, how many decimals to show, and what goes between coins in the top
+bar.
 
 ## Sources
 

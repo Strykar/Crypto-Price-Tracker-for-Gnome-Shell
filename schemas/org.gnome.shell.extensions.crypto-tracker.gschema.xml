@@ -31,5 +31,10 @@
       <default>false</default>
       <summary>Show holdings and a total instead of plain prices</summary>
     </key>
+    <key type="s" name="dropdown-view">
+      <default>'prices'</default>
+      <summary>Which dropdown view to show</summary>
+      <description>prices, both, or portfolio</description>
+    </key>
   </schema>
 </schemalist>
