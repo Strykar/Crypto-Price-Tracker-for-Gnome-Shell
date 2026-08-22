@@ -31,6 +31,7 @@ import { AddCoinMenuItem } from './models/addCoinMenuItem.js';
 import { PanelBox } from './models/panelBox.js';
 import { PriceService } from './lib/priceService.js';
 import { formatPrice } from './lib/format.js';
+import { Sparkline } from './lib/sparkline.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -145,8 +146,9 @@ export default class Extension extends Ex {
     this._indicator._buildCoinsSection();
 
     this._priceService.connect(() => {
+      const style = this._settings.get_string('chart-style');
       for (const coin of this._indicator.coins)
-        coin.onPricesUpdated(this._priceService);
+        coin.onPricesUpdated(this._priceService, style);
       this._indicator.panelBox.update(this._priceService);
     });
     this._priceService.start();

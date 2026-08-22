@@ -18,5 +18,9 @@
       <summary>Seconds between price refreshes</summary>
       <description>Lower bound. Each source also has its own minimum.</description>
     </key>
+    <key type="s" name="chart-style">
+      <default>'gradient-fill'</default>
+      <summary>Sparkline renderer id</summary>
+    </key>
   </schema>
 </schemalist>

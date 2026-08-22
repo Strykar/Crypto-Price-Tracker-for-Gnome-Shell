@@ -15,4 +15,6 @@ import './format.test.js';
 
 import './priceService.test.js';
 
+import './renderers.test.js';
+
 System.exit(await run());

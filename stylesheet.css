@@ -98,3 +98,12 @@
   margin-top: 10px;
   padding-bottom: 5px;
 }
+
+.crypto-sparkline {
+  width: 74px;
+  height: 18px;
+  -crypto-up-color: rgb(46, 194, 112);
+  -crypto-down-color: rgb(232, 77, 84);
+  -crypto-flat-color: rgb(148, 153, 161);
+}
+

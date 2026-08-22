@@ -8,6 +8,7 @@ import St from 'gi://St';
 import * as SourceClient from '../api/sourceClient.js';
 import * as Settings from '../settings.js';
 import { formatPrice } from '../lib/format.js';
+import { Sparkline } from '../lib/sparkline.js';
 
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -55,6 +56,8 @@ export let CoinMenuItem = GObject.registerClass(
       this.add_child(this.nameLbl);
 
 
+      this.sparkline = new Sparkline();
+      this.add_child(this.sparkline);
 
       let expander = new St.Bin({
         style_class: 'popup-menu-item-expander',
@@ -119,11 +122,12 @@ export let CoinMenuItem = GObject.registerClass(
         coingecko_id: this.coingecko_id,
       };
     }
-    onPricesUpdated(priceService) {
+    onPricesUpdated(priceService, chartStyle) {
       if (this._destroyed) return;
       const price = priceService.getPrice(this.id);
       this.nameLbl.text = `${this.title || this.symbol}`;
       this.priceLbl.text = formatPrice(price);
+      this.sparkline.setRendererId(chartStyle);
       this.sparkline.setSeries(priceService.getRing(this.id));
     }
     get state() {
