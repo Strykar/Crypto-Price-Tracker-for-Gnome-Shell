@@ -19,4 +19,6 @@ import './renderers.test.js';
 
 import './portfolio.test.js';
 
+import './history.test.js';
+
 System.exit(await run());

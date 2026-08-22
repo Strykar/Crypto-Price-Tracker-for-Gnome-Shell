@@ -1,3 +1,4 @@
+import { sortedCloses } from '../../lib/history.js';
 export const OkxSource = {
   id: 'okx',
   label: 'OKX',
@@ -35,6 +36,17 @@ export const OkxSource = {
     if (coins.length && out.size === 0)
       throw new Error('okx: no prices resolved from response');
     return out;
+  },
+
+  historyUrl(coin) {
+    const { base, quote } = this.parseSymbol(coin);
+    return `https://www.okx.com/api/v5/market/candles?instId=${`${base}-${quote}`.toUpperCase()}&bar=1m&limit=48`;
+  },
+
+  parseHistory(body) {
+    const json = JSON.parse(body);
+    if (!Array.isArray(json?.data)) throw new Error('okx: history had no data array');
+    return sortedCloses(json.data.map(r => [Number(r[0]), Number(r[4])]));
   },
 
   chartUrl(coin) {

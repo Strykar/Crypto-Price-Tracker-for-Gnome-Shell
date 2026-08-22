@@ -1,3 +1,4 @@
+import { sortedCloses } from '../../lib/history.js';
 export const CryptoSource = {
   id: 'crypto',
   label: 'Crypto',
@@ -37,6 +38,18 @@ export const CryptoSource = {
     if (coins.length && out.size === 0)
       throw new Error('crypto: no prices resolved from response');
     return out;
+  },
+
+  historyUrl(coin) {
+    const { base, quote } = this.parseSymbol(coin);
+    return `https://api.crypto.com/v2/public/get-candlestick?instrument_name=${`${base}_${quote}`.toUpperCase()}&timeframe=1m`;
+  },
+
+  parseHistory(body) {
+    const json = JSON.parse(body);
+    const rows = json?.result?.data;
+    if (!Array.isArray(rows)) throw new Error('crypto: history had no result.data');
+    return sortedCloses(rows.map(r => [Number(r.t), Number(r.c)]));
   },
 
   chartUrl(coin) {

@@ -1,3 +1,4 @@
+import { sortedCloses } from '../../lib/history.js';
 export const CoingeckoSource = {
   id: 'coingecko',
   label: 'Coingecko',
@@ -41,6 +42,18 @@ export const CoingeckoSource = {
     if (coins.length && out.size === 0)
       throw new Error('coingecko: no prices resolved from response');
     return out;
+  },
+
+  historyUrl(coin) {
+    const { base, quote } = this.parseSymbol(coin);
+    return `https://api.coingecko.com/api/v3/coins/${base.toLowerCase()}` +
+           `/market_chart?vs_currency=${quote.toLowerCase()}&days=1`;
+  },
+
+  parseHistory(body) {
+    const json = JSON.parse(body);
+    if (!Array.isArray(json?.prices)) throw new Error('coingecko: history had no prices array');
+    return sortedCloses(json.prices.map(r => [Number(r[0]), Number(r[1])]));
   },
 
   chartUrl(coin) {

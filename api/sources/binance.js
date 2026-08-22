@@ -1,3 +1,4 @@
+import { sortedCloses } from '../../lib/history.js';
 export const BinanceSource = {
   id: 'binance',
   label: 'Binance',
@@ -40,6 +41,18 @@ export const BinanceSource = {
     if (coins.length && out.size === 0)
       throw new Error('binance: no prices resolved from response');
     return out;
+  },
+
+  // Close price is kline field 4.
+  historyUrl(coin) {
+    const { base, quote } = this.parseSymbol(coin);
+    return `https://api.binance.com/api/v3/klines?symbol=${`${base}${quote}`.toUpperCase()}&interval=1m&limit=48`;
+  },
+
+  parseHistory(body) {
+    const rows = JSON.parse(body);
+    if (!Array.isArray(rows)) throw new Error('binance: history was not an array');
+    return sortedCloses(rows.map(r => [Number(r[0]), Number(r[4])]));
   },
 
   chartUrl(coin) {
