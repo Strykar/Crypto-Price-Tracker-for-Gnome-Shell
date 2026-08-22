@@ -89,6 +89,21 @@ Thanks to [azorpax](https://github.com/azorpax) for creating this feature. [Pull
 
     Example: BTC/USD
 
+## Adding a price source
+
+1. Create `api/sources/<id>.js` implementing the source contract: `id`, `label`,
+   `icon`, `assetClass`, `minPollInterval`, `supportsBatch`, and the
+   `parseSymbol`/`buildUrl`/`parsePrices`/`chartUrl` methods. Look at
+   `api/sources/binance.js` for a short example.
+2. Register it: add one import and one line to the `SOURCES` array in
+   `api/sources/index.js`.
+3. Add a `sample: { coins, response, error }` field to your source, a real
+   API response and error envelope for the test suite to check `parsePrices`
+   against. Run `./tests/capture-sample.js <id>`: it fetches both a real
+   response and the API's error envelope, and prints a block to paste in.
+
+That's it, `gjs -m tests/run.js` picks the new source up automatically.
+
 ## Example List of coins
 
 | Name/Vol |
