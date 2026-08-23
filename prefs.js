@@ -222,6 +222,19 @@ export default class CryptoPrefs extends ExtensionPreferences {
       title: 'Your pairs',
       description: 'Drag by the handle to reorder; this is the order they appear in the top bar',
     });
+    // libadwaita's own spacing between a row's prefix widgets.
+    const PREFIX_SPACING = 12;
+    const prefixBox = (widgets, blank = false) => {
+      const box = new Gtk.Box({ spacing: PREFIX_SPACING, valign: Gtk.Align.CENTER });
+      for (const w of widgets) box.append(w);
+      if (blank) {
+        box.opacity = 0;
+        box.can_focus = false;
+        box.sensitive = false;
+      }
+      return box;
+    };
+
     const rebuild = () => {
       for (const r of group._rows ?? []) group.remove(r);
       group._rows = [];
@@ -280,7 +293,6 @@ export default class CryptoPrefs extends ExtensionPreferences {
           target.inPortfolio = check.active;
           s.set_string('coins', JSON.stringify(blob2));
         });
-        row.add_prefix(check);
 
         const handle = new Gtk.Image({
           icon_name: 'list-drag-handle-symbolic',
@@ -299,7 +311,13 @@ export default class CryptoPrefs extends ExtensionPreferences {
         });
         drag.connect('drag-end', () => row.remove_css_class('dim-label'));
         handle.add_controller(drag);
-        row.add_prefix(handle);
+
+        // AdwExpanderRow and AdwEntryRow space prefixes differently, so both share one builder.
+        row.add_prefix(prefixBox([check, handle]));
+        amount.add_prefix(prefixBox([
+          new Gtk.CheckButton(),
+          new Gtk.Image({ icon_name: 'list-drag-handle-symbolic' }),
+        ], true));
 
         const drop = new Gtk.DropTarget({
           actions: Gdk.DragAction.MOVE,

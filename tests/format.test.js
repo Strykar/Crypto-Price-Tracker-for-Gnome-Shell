@@ -1,5 +1,5 @@
 import { test, assertEqual } from './harness.js';
-import { formatPrice, panelSeparator } from '../lib/format.js';
+import { formatMoney, formatPrice, panelSeparator } from '../lib/format.js';
 
 test('formatPrice: decimal count follows the magnitude', () => {
   for (const [input, expected] of [
@@ -54,4 +54,19 @@ test('panelSeparator returns the chosen mark', () => {
 test('panelSeparator falls back rather than throwing on an unknown id', () => {
   assertEqual(panelSeparator('nonsense'), '·');
   assertEqual(panelSeparator(undefined), '·');
+});
+
+test('formatMoney: a fiat quote gets its symbol', () => {
+  assertEqual(formatMoney(1234.5, 'USD', { decimals: 1 }), '$1,234.5');
+  assertEqual(formatMoney(1234.5, 'INR', { decimals: 1 }), '\u20b91,234.5');
+});
+
+test('formatMoney: a crypto quote gets no symbol', () => {
+  assertEqual(formatMoney(1234.5, 'USDT', { decimals: 1 }), '1,234.5');
+  assertEqual(formatMoney(1234.5, 'BTC', { decimals: 1 }), '1,234.5');
+});
+
+test('formatMoney: an unknown or missing currency falls back to the bare number', () => {
+  assertEqual(formatMoney(1234.5, undefined, { decimals: 1 }), '1,234.5');
+  assertEqual(formatMoney(1234.5, 'nonsense', { decimals: 1 }), '1,234.5');
 });

@@ -30,7 +30,7 @@ import { CoinMenuItem } from './models/coinMenuItem.js';
 import { AddCoinMenuItem } from './models/addCoinMenuItem.js';
 import { PanelBox } from './models/panelBox.js';
 import { PriceService } from './lib/priceService.js';
-import { formatPrice } from './lib/format.js';
+import { formatMoney } from './lib/format.js';
 import { availableCurrencies, total, totalSeries } from './lib/portfolio.js';
 import { Sparkline } from './lib/sparkline.js';
 
@@ -80,20 +80,17 @@ const Indicator = GObject.registerClass(
       this._coinsScrollview.add_child(this.coinsScrollViewVbox);
       baseMenuItem.add_child(this._coinsScrollview);
 
-      this._headerRow = new St.BoxLayout({ x_expand: true, style_class: 'crypto-header-row' });
+      this._headerRow = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
+      this._headerRow.add_style_class_name('crypto-header-row');
       const hcell = (text, cls) => new St.Label({
         text, style_class: `crypto-header ${cls}`, y_align: Clutter.ActorAlign.CENTER,
       });
-            this._headerRow.add_child(new St.Icon({ style_class: 'popup-menu-ornament' }));
-      this._headerRow.add_child(hcell('', 'crypto-col-icon'));
       this._headerRow.add_child(hcell('', 'itemLabel'));
       this._headerRow.add_child(new St.Bin({ x_expand: true }));
       this._headerRow.add_child(hcell('Price', 'crypto-header-chart'));
       this._headerRow.add_child(hcell('Buy / sell', 'crypto-header-chart'));
       this._headerRow.add_child(hcell('Held', 'crypto-col-amount'));
       this._headerRow.add_child(hcell('Value', 'crypto-col-value'));
-      this._headerRow.add_child(hcell('', 'crypto-col-price'));
-      this._headerRow.add_child(hcell('', 'crypto-col-switch'));
 
       const gear = new St.Button({
         child: new St.Icon({ icon_name: 'emblem-system-symbolic', style_class: 'popup-menu-icon' }),
@@ -135,30 +132,26 @@ const Indicator = GObject.registerClass(
         return;
       }
 
-      const row = new St.BoxLayout({ x_expand: true });
+      const row = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
       const cell = cls => new St.Label({ style_class: cls, y_align: Clutter.ActorAlign.CENTER });
 
-      row.add_child(new St.Icon({ style_class: 'popup-menu-ornament' }));
-      row.add_child(cell('crypto-col-icon'));
       row.add_child(new St.Label({
         text: 'Total', style_class: 'itemLabel crypto-total',
         y_align: Clutter.ActorAlign.CENTER,
       }));
       row.add_child(new St.Bin({ x_expand: true }));
 
-      const sparkline = new Sparkline({ style_class: 'crypto-sparkline crypto-col-chart' });
+      const sparkline = new Sparkline({ style_class: 'crypto-sparkline crypto-col-chart-dual' });
       sparkline.setSeries(totalSeries(this.coins, currency, priceService));
       row.add_child(sparkline);
 
-      row.add_child(cell('crypto-col-chart'));
+      row.add_child(cell('crypto-col-chart-dual'));
       row.add_child(cell('crypto-col-amount'));
       row.add_child(new St.Label({
-        text: formatPrice(total(this.coins, currency, priceService), fmt),
+        text: formatMoney(total(this.coins, currency, priceService), currency, fmt),
         style_class: 'crypto-col-value crypto-total',
         y_align: Clutter.ActorAlign.CENTER,
       }));
-      row.add_child(cell('crypto-col-price'));
-      row.add_child(cell('crypto-col-switch'));
       const delSpacer = new St.Button({
         child: new St.Icon({ icon_name: 'edit-delete-symbolic', style_class: 'popup-menu-icon' }),
         style_class: 'btn m0',

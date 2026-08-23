@@ -6,7 +6,11 @@ import { direction } from '../lib/renderers/gradientFill.js';
 
 const CTX = { up: [0.18, 0.76, 0.44], down: [0.91, 0.30, 0.33], flat: [0.58, 0.60, 0.63] };
 const PRICE = { rising: [1, 2, 3, 4, 5, 6, 7, 8], falling: [8, 7, 6, 5, 4, 3, 2, 1], flat: [5, 5, 5, 5] };
-const FLOW  = { rising: [30, 40, 50, 60, 70, 75, 78, 80], falling: [80, 75, 70, 60, 50, 40, 35, 30], flat: [50, 50, 50, 50] };
+const FLOW  = {
+  rising:  [[30, 70], [40, 60], [50, 50], [60, 40], [70, 30], [75, 25], [78, 22], [80, 20]],
+  falling: [[80, 20], [75, 25], [70, 30], [60, 40], [50, 50], [40, 60], [35, 65], [30, 70]],
+  flat:    [[50, 50], [50, 50], [50, 50], [50, 50]],
+};
 const sample = r => (r.series === 'flow' ? FLOW : PRICE);
 
 let _seq = 0;
@@ -94,6 +98,18 @@ test('direction: flat means genuinely unmoved', () => {
 
 test('buy-sell declares that it plots flow, not price', () => {
   assertEqual(getRenderer('buy-sell').series, 'flow');
+});
+
+test('buy-sell ignores points that are not a buy/sell pair', () => {
+  assertEqual(drew(getRenderer('buy-sell'), [30, 40, 50, 60]), false,
+    'a stale ratio series must draw nothing, not a fake shape');
+});
+
+test('buy-sell draws both sides of the line', () => {
+  const r = getRenderer('buy-sell');
+  const oneSided = [[10, 0], [20, 0], [30, 0], [40, 0]];
+  assertEqual(sameBytes(renderBytes(r, oneSided), renderBytes(r, FLOW.rising)), false,
+    'buys alone must not look the same as buys against sells');
 });
 
 test('price renderers do not declare a series kind, so they default to price', () => {

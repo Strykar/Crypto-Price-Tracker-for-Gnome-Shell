@@ -11,11 +11,11 @@ test('keyFor identifies a pair by exchange and symbol, not by id', () => {
 
 test('save then load round-trips', () => {
   const p = tmp();
-  const data = new Map([['coingecko:BTC/USD', { prices: [1, 2, 3], flow: [50, 60] }]]);
+  const data = new Map([['coingecko:BTC/USD', { prices: [1, 2, 3], flow: [[50, 60]] }]]);
   assertEqual(save(data, p), true);
   const back = load(p);
   assertEqual(back.get('coingecko:BTC/USD').prices, [1, 2, 3]);
-  assertEqual(back.get('coingecko:BTC/USD').flow, [50, 60]);
+  assertEqual(back.get('coingecko:BTC/USD').flow, [[50, 60]]);
 });
 
 test('the limit is five minutes', () => {
@@ -50,4 +50,17 @@ test('a corrupt cache is empty, not an error', () => {
 
 test('save to an unwritable path reports failure rather than throwing', () => {
   assertEqual(save(new Map([['a', {}]]), '/proc/nope/history.json'), false);
+});
+
+test('a flow series in the old ratio format is dropped, not handed on', () => {
+  const path = tmp();
+  save(new Map([['binance:BTC/USDT', { prices: [1, 2], flow: [40, 60] }]]), path);
+  assertEqual(load(path).get('binance:BTC/USDT').flow, null);
+});
+
+test('a flow series of buy/sell pairs survives the round trip', () => {
+  const path = tmp();
+  save(new Map([['binance:BTC/USDT', { prices: [1, 2], flow: [[40, 60], [70, 30]] }]]), path);
+  assertEqual(JSON.stringify(load(path).get('binance:BTC/USDT').flow),
+              JSON.stringify([[40, 60], [70, 30]]));
 });

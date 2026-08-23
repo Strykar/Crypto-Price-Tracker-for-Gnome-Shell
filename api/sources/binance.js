@@ -57,13 +57,22 @@ export const BinanceSource = {
     return sortedCloses(rows.map(r => [Number(r[0]), Number(r[4])]));
   },
 
+  // Field 5 is the hour's volume, field 9 the taker-buy part of it.
+  flowUrl(coin) {
+    const { base, quote } = this.parseSymbol(coin);
+    return `https://api.binance.com/api/v3/klines?symbol=${`${base}${quote}`.toUpperCase()}&interval=1h&limit=24`;
+  },
+
   parseFlow(body) {
     const rows = JSON.parse(body);
     if (!Array.isArray(rows)) throw new Error('binance: flow was not an array');
-    return sortedCloses(rows.map(r => {
-      const vol = Number(r[5]), buy = Number(r[9]);
-      return [Number(r[0]), vol > 0 ? (buy / vol) * 100 : 50];
-    }));
+    return rows
+      .filter(r => [0, 5, 9].every(i => isFinite(Number(r[i]))))
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(r => {
+        const vol = Number(r[5]), buy = Number(r[9]);
+        return [buy, Math.max(0, vol - buy)];
+      });
   },
 
   chartUrl(coin) {

@@ -31,13 +31,22 @@ export async function fetchPrices(source, coins, fetchFn = get) {
   return out;
 }
 
+async function fetchFlow(source, coin, fetchFn) {
+  if (!source.flowUrl || !source.parseFlow) return null;
+  try {
+    return source.parseFlow((await fetchFn(source.flowUrl(coin))).body, coin);
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function fetchHistory(source, coins, fetchFn = get) {
   if (!source.historyUrl || !source.parseHistory) return new Map();
   const settled = await Promise.allSettled(coins.map(async c => {
     const body = await fetchFn(source.historyUrl(c)).then(r => r.body);
     return [c.id, {
       prices: source.parseHistory(body, c),
-      flow: source.parseFlow ? source.parseFlow(body, c) : null,
+      flow: await fetchFlow(source, c, fetchFn),
     }];
   }));
   const out = new Map();

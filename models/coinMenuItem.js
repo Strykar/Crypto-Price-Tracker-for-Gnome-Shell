@@ -7,7 +7,7 @@ import St from 'gi://St';
 
 import * as SourceClient from '../api/sourceClient.js';
 import * as Settings from '../settings.js';
-import { formatPrice } from '../lib/format.js';
+import { formatMoney } from '../lib/format.js';
 import { Sparkline } from '../lib/sparkline.js';
 import { quoteOf, inPortfolio } from '../lib/portfolio.js';
 
@@ -44,12 +44,12 @@ export let CoinMenuItem = GObject.registerClass(
         style_class: `popup-menu-icon exchange-icon ${this.exchange.toLowerCase()}`,
       });
 
-      let viewBtn = new St.Button({
+      this._viewBtn = new St.Button({
         child: viewIcon,
         style_class: 'btn m0',
       });
-      viewBtn.connect('clicked', this._openChart.bind(this));
-      this.add_child(viewBtn);
+      this._viewBtn.connect('clicked', this._openChart.bind(this));
+      this.add_child(this._viewBtn);
 
       const expanderEarly = new St.Bin({
         style_class: 'popup-menu-item-expander',
@@ -69,20 +69,20 @@ export let CoinMenuItem = GObject.registerClass(
       this.add_child(expanderEarly);
       this.add_child(this.sparkline);
 
-      this.flowSparkline = new Sparkline({ opacity: 0, style_class: 'crypto-sparkline crypto-col-chart' });
+      this.flowSparkline = new Sparkline({ visible: false, style_class: 'crypto-sparkline crypto-col-chart-dual' });
       this.add_child(this.flowSparkline);
 
       this.amountLbl = new St.Label({
         style_class: 'crypto-col-amount',
         y_align: Clutter.ActorAlign.CENTER,
-        opacity: 0,
+        visible: false,
       });
       this.add_child(this.amountLbl);
 
       this.valueLbl = new St.Label({
         style_class: 'crypto-col-value',
         y_align: Clutter.ActorAlign.CENTER,
-        opacity: 0,
+        visible: false,
       });
       this.add_child(this.valueLbl);
 
@@ -150,12 +150,14 @@ export let CoinMenuItem = GObject.registerClass(
     onPricesUpdated(priceService, chartStyle, fmt) {
       if (this._destroyed) return;
       const price = priceService.getPrice(this.id);
+      const quote = quoteOf(this);
       this.nameLbl.text = `${this.title || this.symbol}`;
-      this.priceLbl.text = formatPrice(price, fmt);
+      this.priceLbl.text = formatMoney(price, quote, fmt);
 
       const held = Number(this.amount) || 0;
       this.amountLbl.text = held ? String(held) : '—';
-      this.valueLbl.text = held && isFinite(price) ? formatPrice(held * price, fmt) : '—';
+      this.valueLbl.text = held && isFinite(price)
+        ? formatMoney(held * price, quote, fmt) : '—';
       this.flowSparkline.setRendererId('buy-sell');
       const f = priceService.getFlow(this.id);
       this.flowSparkline.setSeries(f ?? []);
@@ -179,12 +181,15 @@ export let CoinMenuItem = GObject.registerClass(
       this.visible = on ? portfolioPair : !portfolioPair;
 
       const show = on && portfolioPair;
-      this.flowSparkline.opacity = show ? 255 : 0;
-      this.amountLbl.opacity = show ? 255 : 0;
-      this.valueLbl.opacity = show ? 255 : 0;
-      this.priceLbl.opacity = show ? 0 : 255;
-      this._statusBtn.opacity = on ? 0 : 255;
-      this._statusBtn.reactive = !on;
+      this.flowSparkline.visible = show;
+      this.amountLbl.visible = show;
+      this.valueLbl.visible = show;
+      this.priceLbl.visible = !show;
+      this._statusBtn.visible = !on;
+      this._viewBtn.visible = !show;
+
+      this.sparkline.style_class =
+        `crypto-sparkline ${show ? 'crypto-col-chart-dual' : 'crypto-col-chart'}`;
     }
 
     activate(event) {

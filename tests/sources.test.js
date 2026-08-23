@@ -125,3 +125,31 @@ test('every source usable from preferences declares an example', () => {
   for (const id of ['coingecko', 'binance', 'okx', 'crypto'])
     assertEqual(typeof getSource(id)?.example, 'string', `${id} has no example`);
 });
+
+const KLINES = JSON.stringify([
+  [2000, '0', '0', '0', '61', '300', 0, '0', 0, '110', '0', '0'],
+  [1000, '0', '0', '0', '60', '200', 0, '0', 0, '150', '0', '0'],
+]);
+
+test('binance: flowUrl asks for a full day, one candle an hour', () => {
+  const url = getSource('binance').flowUrl({ symbol: 'BTC/USDT' });
+  assertEqual(url.includes('interval=1h'), true, url);
+  assertEqual(url.includes('limit=24'), true, url);
+});
+
+test('binance: parseFlow returns buy and sell volume, oldest first', () => {
+  const flow = getSource('binance').parseFlow(KLINES);
+  assertEqual(JSON.stringify(flow), JSON.stringify([[150, 50], [110, 190]]));
+});
+
+// Binance can report taker buy volume above total volume.
+test('binance: parseFlow never reports negative selling', () => {
+  const odd = JSON.stringify([[1000, '0', '0', '0', '1', '5', 0, '0', 0, '7', '0', '0']]);
+  assertEqual(getSource('binance').parseFlow(odd)[0][1], 0);
+});
+
+test('binance: parseFlow rejects a body that is not an array', () => {
+  let threw = false;
+  try { getSource('binance').parseFlow('{"code":-1121}'); } catch (e) { threw = true; }
+  assertEqual(threw, true);
+});

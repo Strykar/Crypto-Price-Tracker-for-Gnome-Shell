@@ -127,14 +127,12 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
-.crypto-col-icon   { min-width: 34px; }
-.crypto-col-chart  { min-width: 74px; }
+.crypto-col-chart      { min-width: 150px; }
+.crypto-col-chart-dual { min-width: 96px; }
 .crypto-col-amount { min-width: 70px; text-align: right; padding: 0 8px;
                      font-family: monospace; color: rgba(255,255,255,0.75); }
-.crypto-col-value  { min-width: 90px; text-align: right; padding-left: 8px;
+.crypto-col-value  { min-width: 100px; text-align: right; padding-left: 8px;
                      font-family: monospace; }
-.crypto-col-price  { min-width: 90px; text-align: right; padding-left: 8px;
+.crypto-col-price  { min-width: 100px; text-align: right; padding-left: 8px;
                      font-family: monospace; }
-.crypto-col-switch { min-width: 46px; }
-.crypto-col-del    { min-width: 36px; }
-.crypto-header-chart { min-width: 74px; text-align: center; }
+.crypto-header-chart { min-width: 96px; text-align: center; }
