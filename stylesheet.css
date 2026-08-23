@@ -59,10 +59,6 @@
   min-width: 60px;
 }
 
-.text-align-right {
-  text-align: right;
-}
-
 .exchange-icon {
   background-size: 15px;
   height: 18px;
@@ -145,4 +141,14 @@
   min-width: 90px;
   text-align: right;
   padding-left: 8px;
+}
+
+.crypto-header {
+  font-size: 0.75em;
+  color: rgba(255, 255, 255, 0.45);
+}
+.crypto-header-chart {
+  min-width: 74px;
+  text-align: center;
+  padding: 0 2px;
 }

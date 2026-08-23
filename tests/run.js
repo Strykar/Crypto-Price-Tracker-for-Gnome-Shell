@@ -25,4 +25,6 @@ import './search.test.js';
 
 import './reorder.test.js';
 
+import './historyCache.test.js';
+
 System.exit(await run());

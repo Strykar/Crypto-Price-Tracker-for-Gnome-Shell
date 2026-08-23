@@ -180,6 +180,7 @@ export let CoinMenuItem = GObject.registerClass(
       this.flowSparkline.opacity = show ? 255 : 0;
       this.amountLbl.opacity = show ? 255 : 0;
       this.valueLbl.opacity = show ? 255 : 0;
+      this.priceLbl.opacity = show ? 0 : 255;
       this._statusBtn.visible = !on;
     }
 

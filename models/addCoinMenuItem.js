@@ -44,6 +44,14 @@ export let AddCoinMenuItem = GObject.registerClass(
       hbox.add_child(coinSymbol);
       this._symbolEntry = coinSymbol;
 
+      let coinAmount = new St.Entry({
+        name: 'amount',
+        hint_text: 'Held?',
+        can_focus: true,
+        x_expand: true,
+        style_class: 'crypto-input',
+      });
+
       let coinTitle = new St.Entry({
         name: 'title',
         hint_text: 'Label?',
@@ -52,6 +60,7 @@ export let AddCoinMenuItem = GObject.registerClass(
         style_class: 'crypto-input',
       });
       hbox.add_child(coinTitle);
+      hbox.add_child(coinAmount);
 
       let saveIcon = new St.Icon({
         icon_name: 'media-floppy-symbolic',
@@ -63,7 +72,7 @@ export let AddCoinMenuItem = GObject.registerClass(
       });
       addBtn.connect(
         'clicked',
-        this._addCoin.bind(this, coinSymbol, coinTitle)
+        this._addCoin.bind(this, coinSymbol, coinTitle, coinAmount)
       );
       hbox.add_child(addBtn);
     }
@@ -73,7 +82,7 @@ export let AddCoinMenuItem = GObject.registerClass(
       if (this._symbolEntry && src?.example) this._symbolEntry.hint_text = src.example;
     }
 
-    async _addCoin(coinSymbol, coinTitle) {
+    async _addCoin(coinSymbol, coinTitle, coinAmount) {
       // TODO show error
       if (coinSymbol.text === '' || !coinSymbol.text.includes('/')) return;
 
@@ -96,6 +105,7 @@ export let AddCoinMenuItem = GObject.registerClass(
         title: `${coinTitle.text}`,
         exchange: `${this.current_exchange}`,
         coingecko_id,
+        amount: parseFloat(coinAmount?.text) > 0 ? parseFloat(coinAmount.text) : 0,
       };
 
       try {
@@ -107,6 +117,7 @@ export let AddCoinMenuItem = GObject.registerClass(
       }
 
       coinTitle.text = '';
+      if (coinAmount) coinAmount.text = '';
       coinSymbol.text = '';
     }
   }

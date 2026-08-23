@@ -1,5 +1,5 @@
 import { test, assertEqual } from './harness.js';
-import { groupBySource, pushHistory, dueSources, coinsToFetch } from '../lib/priceService.js';
+import { groupBySource, pushHistory, dueSources, coinsToFetch, nextBackoff } from '../lib/priceService.js';
 
 test('groupBySource buckets coins by their source id', () => {
   const g = groupBySource([
@@ -28,10 +28,10 @@ test('pushHistory ignores a non-finite price', () => {
 });
 
 test('dueSources respects each source minPollInterval', () => {
-  // binance minPollInterval 5, coingecko 15
+  // binance minPollInterval 5, coingecko 30
   const last = new Map([['binance', 1000], ['coingecko', 1000]]);
   const due = dueSources(['binance', 'coingecko'], last, 1010 /* now, seconds */);
-  assertEqual(due, ['binance'], 'coingecko is not due for another 5s');
+  assertEqual(due, ['binance'], 'coingecko is not due for another 20s');
 });
 
 test('dueSources returns a source never fetched before', () => {
@@ -49,4 +49,26 @@ test('coinsToFetch: a HELD but panel-hidden coin is still fetched', () => {
 test('coinsToFetch: a hidden coin with no holding is not fetched', () => {
   assertEqual(coinsToFetch([{ id: 'a', active: false }]), []);
   assertEqual(coinsToFetch([{ id: 'a', active: false, amount: 0 }]), []);
+});
+
+test('nextBackoff doubles from a minute and stops at fifteen', () => {
+  assertEqual(nextBackoff(0), 60);
+  assertEqual(nextBackoff(60), 120);
+  assertEqual(nextBackoff(120), 240);
+  assertEqual(nextBackoff(480), 900);
+  assertEqual(nextBackoff(900), 900, 'must not grow without limit');
+});
+
+test('a source in backoff is not due, however long since its last fetch', () => {
+  const last = new Map([['binance', 0]]);
+  const backoff = new Map([['binance', 500]]);
+  assertEqual(dueSources(['binance'], last, 400, backoff), []);
+  assertEqual(dueSources(['binance'], last, 501, backoff), ['binance'],
+    'and is due again once the penalty expires');
+});
+
+test('backoff only holds back the source that was throttled', () => {
+  const last = new Map();
+  const backoff = new Map([['coingecko', 500]]);
+  assertEqual(dueSources(['binance', 'coingecko'], last, 100, backoff), ['binance']);
 });

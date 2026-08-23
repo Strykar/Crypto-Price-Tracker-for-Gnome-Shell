@@ -80,14 +80,22 @@ const Indicator = GObject.registerClass(
       this._coinsScrollview.add_child(this.coinsScrollViewVbox);
       baseMenuItem.add_child(this._coinsScrollview);
 
-      this._portfolioRow = new PopupMenu.PopupBaseMenuItem({
-        hover: false,
-        can_focus: false,
-        activate: false,
-        reactive: false,
+      this._headerRow = new St.BoxLayout({ x_expand: true, style_class: 'crypto-header-row' });
+      const hcell = (text, cls) => new St.Label({
+        text, style_class: `crypto-header ${cls}`, y_align: Clutter.ActorAlign.CENTER,
       });
+      this._headerRow.add_child(new St.Icon({ style_class: 'popup-menu-icon' }));
+      this._headerRow.add_child(new St.Bin({ x_expand: true }));
+      this._headerRow.add_child(hcell('Price', 'crypto-header-chart'));
+      this._headerRow.add_child(hcell('Buy / sell', 'crypto-header-chart'));
+      this._headerRow.add_child(hcell('Held', 'crypto-col-amount'));
+      this._headerRow.add_child(hcell('Value', 'crypto-col-value'));
+      this._headerRow.add_child(new St.Label({ style_class: 'crypto-col-price' }));
+      this._headerRow.visible = false;
+
+
+      this._portfolioRow = new St.BoxLayout({ orientation: Clutter.Orientation.VERTICAL, x_expand: true });
       this._portfolioRow.visible = false;
-      this.coinSection.addMenuItem(this._portfolioRow);
     }
 
     _buildAddCoinSection(Me) {
@@ -102,9 +110,10 @@ const Indicator = GObject.registerClass(
       addCoinBtnMenu.menu.addMenuItem(addCoinSubMenu);
     }
 
-    updateTotal(on, currency, priceService) {
+    updateTotal(on, currency, priceService, fmt) {
       this._portfolioRow.remove_all_children();
       this._portfolioRow.visible = on;
+      this._headerRow.visible = on && !!currency;
       if (!on) return;
 
       if (!currency || !availableCurrencies(this.coins).includes(currency)) {
@@ -114,19 +123,26 @@ const Indicator = GObject.registerClass(
 
       const row = new St.BoxLayout({ x_expand: true });
 
+      row.add_child(new St.Icon({ style_class: 'popup-menu-icon' }));
+      row.add_child(new St.Label({
+        text: 'Total',
+        style_class: 'itemLabel crypto-total',
+        y_align: Clutter.ActorAlign.CENTER,
+      }));
+      row.add_child(new St.Bin({ x_expand: true }));
+
       const sparkline = new Sparkline();
       sparkline.setSeries(totalSeries(this.coins, currency, priceService));
       row.add_child(sparkline);
 
-      const expander = new St.Bin({ x_expand: true });
-      row.add_child(expander);
-
-      const totalLbl = new St.Label({
-        text: formatPrice(total(this.coins, currency, priceService)),
-        style_class: 'itemLabel text-align-right',
+      row.add_child(new Sparkline({ opacity: 0 }));
+      row.add_child(new St.Label({ style_class: 'crypto-col-amount' }));
+      row.add_child(new St.Label({
+        text: formatPrice(total(this.coins, currency, priceService), fmt),
+        style_class: 'crypto-col-value crypto-total',
         y_align: Clutter.ActorAlign.CENTER,
-      });
-      row.add_child(totalLbl);
+      }));
+      row.add_child(new St.Label({ style_class: 'crypto-col-price' }));
 
       this._portfolioRow.add_child(row);
     }
@@ -134,9 +150,10 @@ const Indicator = GObject.registerClass(
     _buildCoinsSection() {
       this._setCoinsFromSettings();
 
-      for (const coin of this.coins) {
-        this.coinsScrollViewVbox.add_child(coin);
-      }
+      this.coinsScrollViewVbox.remove_all_children();
+      this.coinsScrollViewVbox.add_child(this._headerRow);
+      for (const coin of this.coins) this.coinsScrollViewVbox.add_child(coin);
+      this.coinsScrollViewVbox.add_child(this._portfolioRow);
       this._coinsScrollview.set_height(
         CryptoUtil.getHeight(this.coinsScrollViewVbox.height),
       );
@@ -186,7 +203,7 @@ export default class Extension extends Ex {
       const on = this._settings.get_string('dropdown-view') === 'portfolio';
       const currency = this._settings.get_string('base-currency');
       for (const coin of this._indicator.coins) coin.setPortfolioView(on, currency);
-      this._indicator.updateTotal(on, currency, this._priceService);
+      this._indicator.updateTotal(on, currency, this._priceService, fmtOpts());
     };
     this._applyPortfolio = applyPortfolio;
 
