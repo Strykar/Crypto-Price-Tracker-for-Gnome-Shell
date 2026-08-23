@@ -17,19 +17,21 @@ export default class ShellTests {
         return GLib.SOURCE_REMOVE;
       }
       seedPrices(ext);
-      let passed = 0, failed = 0;
-      for (const [name, fn] of CASES) {
-        try {
-          fn(ext);
-          passed++;
-          console.log(`SHELLTEST ok   | ${name}`);
-        } catch (e) {
-          failed++;
-          console.log(`SHELLTEST FAIL | ${name}`);
-          console.log(`SHELLTEST      |   ${e.message}`);
+      (async () => {
+        let passed = 0, failed = 0;
+        for (const [name, fn] of CASES) {
+          try {
+            await fn(ext);
+            passed++;
+            console.log(`SHELLTEST ok   | ${name}`);
+          } catch (e) {
+            failed++;
+            console.log(`SHELLTEST FAIL | ${name}`);
+            console.log(`SHELLTEST      |   ${e.message}`);
+          }
         }
-      }
-      console.log(`SHELLTEST DONE ${passed} ${failed}`);
+        console.log(`SHELLTEST DONE ${passed} ${failed}`);
+      })();
       return GLib.SOURCE_REMOVE;
     });
   }

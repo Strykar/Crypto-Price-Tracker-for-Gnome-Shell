@@ -61,12 +61,17 @@ test('formatMoney: a fiat quote gets its symbol', () => {
   assertEqual(formatMoney(1234.5, 'INR', { decimals: 1 }), '\u20b91,234.5');
 });
 
-test('formatMoney: a crypto quote gets no symbol', () => {
-  assertEqual(formatMoney(1234.5, 'USDT', { decimals: 1 }), '1,234.5');
-  assertEqual(formatMoney(1234.5, 'BTC', { decimals: 1 }), '1,234.5');
+test('formatMoney: a token quote is named rather than given a symbol', () => {
+  assertEqual(formatMoney(1234.5, 'USDT', { decimals: 1 }), '1,234.5 USDT');
+  assertEqual(formatMoney(1234.5, 'BTC', { decimals: 1 }), '1,234.5 BTC');
 });
 
-test('formatMoney: an unknown or missing currency falls back to the bare number', () => {
+test('formatMoney: no currency at all leaves the number bare', () => {
   assertEqual(formatMoney(1234.5, undefined, { decimals: 1 }), '1,234.5');
-  assertEqual(formatMoney(1234.5, 'nonsense', { decimals: 1 }), '1,234.5');
+  assertEqual(formatMoney(1234.5, '', { decimals: 1 }), '1,234.5');
+});
+
+test('formatMoney: a missing price is a dash, with nothing appended', () => {
+  assertEqual(formatMoney(NaN, 'USDT'), formatPrice(NaN));
+  assertEqual(formatMoney(undefined, 'USD'), formatPrice(NaN));
 });

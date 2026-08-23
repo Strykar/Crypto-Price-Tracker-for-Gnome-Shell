@@ -85,12 +85,25 @@ const Indicator = GObject.registerClass(
       const hcell = (text, cls) => new St.Label({
         text, style_class: `crypto-header ${cls}`, y_align: Clutter.ActorAlign.CENTER,
       });
+      this._hIcon = new St.Button({
+        child: new St.Icon({ style_class: 'popup-menu-icon exchange-icon' }),
+        style_class: 'btn m0', opacity: 0, reactive: false,
+      });
+      this._headerRow.add_child(this._hIcon);
       this._headerRow.add_child(hcell('', 'itemLabel'));
       this._headerRow.add_child(new St.Bin({ x_expand: true }));
-      this._headerRow.add_child(hcell('Price', 'crypto-header-chart'));
-      this._headerRow.add_child(hcell('Buy / sell', 'crypto-header-chart'));
-      this._headerRow.add_child(hcell('Held', 'crypto-col-amount'));
-      this._headerRow.add_child(hcell('Value', 'crypto-col-value'));
+      this._hChart = hcell('Price', 'crypto-header-chart');
+      this._hFlow = hcell('Buy / sell', 'crypto-header-chart');
+      this._hHeld = hcell('Held', 'crypto-col-amount');
+      this._hValue = hcell('Value', 'crypto-col-value');
+      this._hPrice = hcell('Price', 'crypto-col-price');
+      for (const c of [this._hChart, this._hFlow, this._hHeld, this._hValue, this._hPrice])
+        this._headerRow.add_child(c);
+
+      this._hSwitch = new St.Button({
+        child: new PopupMenu.Switch(false), opacity: 0, reactive: false,
+      });
+      this._headerRow.add_child(this._hSwitch);
 
       const gear = new St.Button({
         child: new St.Icon({ icon_name: 'emblem-system-symbolic', style_class: 'popup-menu-icon' }),
@@ -124,7 +137,7 @@ const Indicator = GObject.registerClass(
     updateTotal(on, currency, priceService, fmt) {
       this._portfolioRow.remove_all_children();
       this._portfolioRow.visible = on;
-      this._headerRow.visible = on && !!currency;
+      this.setHeaderView(on, currency);
       if (!on) return;
 
       if (!currency || !availableCurrencies(this.coins).includes(currency)) {
@@ -163,6 +176,27 @@ const Indicator = GObject.registerClass(
       this._portfolioRow.add_child(row);
     }
 
+    setHeaderView(on, currency) {
+      const portfolio = on && !!currency;
+      this._headerRow.visible = true;
+      this._hIcon.visible = !portfolio;
+      this._hChart.visible = true;
+      this._hFlow.visible = portfolio;
+      this._hHeld.visible = portfolio;
+      this._hValue.visible = portfolio;
+      this._hPrice.visible = !portfolio;
+      this._hSwitch.visible = !portfolio;
+      this._hChart.style_class = `crypto-header ${portfolio ? 'crypto-header-chart' : 'crypto-col-chart'}`;
+    }
+
+    // Sum the rows: the box caches its preferred height until the next layout.
+    fitScrollView() {
+      const natural = this.coinsScrollViewVbox.get_children()
+        .filter(c => c.visible)
+        .reduce((h, c) => h + c.get_preferred_height(-1)[1], 0);
+      this._coinsScrollview.set_height(CryptoUtil.getHeight(natural));
+    }
+
     _buildCoinsSection() {
       this._setCoinsFromSettings();
 
@@ -170,9 +204,7 @@ const Indicator = GObject.registerClass(
       this.coinsScrollViewVbox.add_child(this._headerRow);
       for (const coin of this.coins) this.coinsScrollViewVbox.add_child(coin);
       this.coinsScrollViewVbox.add_child(this._portfolioRow);
-      this._coinsScrollview.set_height(
-        CryptoUtil.getHeight(this.coinsScrollViewVbox.height),
-      );
+      this.fitScrollView();
       this.onCoinsChanged?.();
     }
 
@@ -220,6 +252,7 @@ export default class Extension extends Ex {
       const currency = this._settings.get_string('base-currency');
       for (const coin of this._indicator.coins) coin.setPortfolioView(on, currency);
       this._indicator.updateTotal(on, currency, this._priceService, fmtOpts());
+      this._indicator.fitScrollView();
     };
     this._applyPortfolio = applyPortfolio;
 

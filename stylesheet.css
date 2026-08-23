@@ -133,6 +133,6 @@
                      font-family: monospace; color: rgba(255,255,255,0.75); }
 .crypto-col-value  { min-width: 100px; text-align: right; padding-left: 8px;
                      font-family: monospace; }
-.crypto-col-price  { min-width: 100px; text-align: right; padding-left: 8px;
+.crypto-col-price  { min-width: 140px; text-align: right; padding-left: 8px;
                      font-family: monospace; }
 .crypto-header-chart { min-width: 96px; text-align: center; }

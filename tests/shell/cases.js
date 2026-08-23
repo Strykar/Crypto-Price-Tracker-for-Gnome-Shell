@@ -1,5 +1,17 @@
+import GLib from 'gi://GLib';
+
 function fail(message) {
   throw new Error(message);
+}
+
+// A preferred height is cached until the next layout, so wait a turn.
+export function settle(ms = 400) {
+  return new Promise(resolve => {
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+      resolve();
+      return GLib.SOURCE_REMOVE;
+    });
+  });
 }
 
 function is(actual, expected, what) {
@@ -8,13 +20,26 @@ function is(actual, expected, what) {
 }
 
 // Throws on an unallocated child, or two rows of nulls would compare equal.
-function columns(row) {
+function columns(row, label = '') {
   return row.get_children()
     .filter(c => c.visible)
-    .map(c => { const b = c.get_allocation_box(); return [Math.round(b.x1), Math.round(b.x2)]; });
+    .map(c => {
+      const b = c.get_allocation_box();
+      if (!isFinite(b.x1) || !isFinite(b.x2))
+        fail(`${label}: ${c.style_class || c.constructor.name} has never been allocated`);
+      return [Math.round(b.x1), Math.round(b.x2)];
+    });
 }
 
 const portfolioRows = ind => ind.coins.filter(c => c.visible);
+
+export async function showView(ext, view) {
+  ext._settings.set_string('dropdown-view', view);
+  ext._applyPortfolio();
+  ext._indicator.menu.close();
+  ext._indicator.menu.open();
+  await settle();
+}
 
 export const PRICES = new Map([['1', 80000], ['2', 2500], ['3', 100], ['4', 80000], ['5', 2500]]);
 
@@ -28,13 +53,26 @@ export function seedPrices(ext) {
 
 export const CASES = [
 
-  ['the heading, a coin row and the total share column offsets', ext => {
+  ['the heading, a coin row and the total share column offsets', async ext => {
     const ind = ext._indicator;
+    await showView(ext, 'portfolio');
     const coin = portfolioRows(ind)[0];
     if (!coin) fail('no visible coin row to measure');
     const total = ind._portfolioRow.get_first_child();
-    is(columns(coin), columns(ind._headerRow), 'coin row against the heading');
-    is(columns(total), columns(ind._headerRow), 'total against the heading');
+    is(columns(coin, 'coin'), columns(ind._headerRow, 'heading'), 'coin row against the heading');
+    is(columns(total, 'total'), columns(ind._headerRow, 'heading'), 'total against the heading');
+  }],
+
+  ['the heading lines up with a prices row as well', async ext => {
+    const ind = ext._indicator;
+    await showView(ext, 'prices');
+    try {
+      const row = ind.coins.find(c => c.visible);
+      if (!row) fail('no visible prices row to measure');
+      is(columns(row, 'prices row'), columns(ind._headerRow, 'heading'), 'prices row against the heading');
+    } finally {
+      await showView(ext, 'portfolio');
+    }
   }],
 
   ['the heading sits above the coin rows and the total below them', ext => {
@@ -157,6 +195,31 @@ export const CASES = [
     } finally {
       delete chart.queue_repaint;
     }
+  }],
+
+  ['the scroll view follows the height of the view it is showing', async ext => {
+    const ind = ext._indicator;
+    const rowsHeight = () => Math.round(ind.coinsScrollViewVbox.get_children()
+      .filter(c => c.visible)
+      .reduce((h, c) => h + c.get_preferred_height(-1)[1], 0));
+    const measure = async view => {
+      ext._settings.set_string('dropdown-view', view);
+      ext._applyPortfolio();
+      await settle();
+      return [Math.round(ind._coinsScrollview.height), rowsHeight()];
+    };
+    const [portScroll, portRows] = await measure('portfolio');
+    const [priceScroll, priceRows] = await measure('prices');
+    ext._settings.set_string('dropdown-view', 'portfolio');
+    ext._applyPortfolio();
+    await settle();
+
+    if (portRows === priceRows)
+      fail(`both views need ${portRows}px, so this proves nothing`);
+    if (portScroll !== portRows)
+      fail(`portfolio: ${portRows}px of rows in a ${portScroll}px scroll view`);
+    if (priceScroll !== priceRows)
+      fail(`prices: ${priceRows}px of rows in a ${priceScroll}px scroll view`);
   }],
 
   // Upstream #44. Runs last, because the deleted pair does not come back.
