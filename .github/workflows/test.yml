@@ -1,0 +1,37 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [fedora:43, fedora:44]
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install gjs and tools
+        run: dnf install -y gjs glib2-devel gnome-shell zip unzip findutils
+      - name: Unit tests
+        run: gjs -m tests/run.js
+      - name: Bundle completeness
+        run: ./tests/bundle.sh
+      - name: Metadata sanity
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          m = json.load(open('metadata.json'))
+          for key in ('uuid', 'name', 'shell-version', 'version'):
+              assert key in m, f'metadata.json is missing {key}'
+          assert m['uuid'] == 'crypto@alipirpiran.github', 'uuid must never change'
+          assert m['shell-version'], 'shell-version must not be empty'
+          print('metadata ok:', m['shell-version'])
+          PY
+      - name: Shell tests (headless gnome-shell)
+        run: ./tests/shell.sh
+        continue-on-error: true

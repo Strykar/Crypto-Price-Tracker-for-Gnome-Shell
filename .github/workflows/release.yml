@@ -1,0 +1,29 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: dnf install -y gjs glib2-devel gnome-shell zip unzip findutils
+      - run: gjs -m tests/run.js
+      - run: ./tests/bundle.sh
+      - run: ./pack.sh
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: '*.shell-extension.zip'
+          body: |
+            Install with:
+
+                gnome-extensions install --force crypto@alipirpiran.github.shell-extension.zip
+
+            Submission to extensions.gnome.org is manual: their review is
+            done by people, so this workflow stops at the GitHub release.
