@@ -250,7 +250,9 @@ export let CoinMenuItem = GObject.registerClass(
       Gio.AppInfo.launch_default_for_uri(chartUrl, null);
     }
 
+    // Deleting a pair destroys this row twice: via changed::coins, then in _delCoin.
     destroy() {
+      if (this._destroyed) return;
       this._destroyed = true;
       super.destroy();
     }

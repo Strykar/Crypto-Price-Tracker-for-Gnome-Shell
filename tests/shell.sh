@@ -1,57 +1,72 @@
 #!/bin/bash
-# Headless load test with its own XDG_DATA_HOME, so the real install is untouched.
+# Runs tests/shell/cases.js in a headless gnome-shell with its own
+# XDG_DATA_HOME, so the real install is never touched.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 REPO=$PWD
 UUID=crypto@alipirpiran.github
+PROBE=crypto-shelltest@local
 
 TMP=$(mktemp -d)
 [ -n "${SHELLTEST_KEEP:-}" ] && echo "keeping $TMP" || trap 'rm -rf "$TMP"' EXIT
 EXT="$TMP/data/gnome-shell/extensions/$UUID"
-mkdir -p "$EXT"
+P="$TMP/data/gnome-shell/extensions/$PROBE"
+mkdir -p "$EXT" "$P"
 
 for item in api lib models utils schemas assets extension.js settings.js stylesheet.css metadata.json; do
   [ -e "$REPO/$item" ] && cp -r "$REPO/$item" "$EXT/"
 done
+cp "$REPO/tests/shell/metadata.json" "$REPO/tests/shell/extension.js" "$REPO/tests/shell/cases.js" "$P/"
+
+COINS='{"coins":[
+ {"id":"1","symbol":"BTC/USD","exchange":"coingecko","title":"BTC","active":true,"amount":0.12,"coingecko_id":"bitcoin"},
+ {"id":"2","symbol":"ETH/USD","exchange":"coingecko","title":"ETH","active":true,"amount":1.15,"coingecko_id":"ethereum"},
+ {"id":"3","symbol":"SOL/USD","exchange":"coingecko","title":"SOL","active":true,"amount":4.75,"coingecko_id":"solana"},
+ {"id":"4","symbol":"BTC/USDT","exchange":"binance","title":"BTCt","active":true,"amount":0},
+ {"id":"5","symbol":"ETH/USDT","exchange":"binance","title":"ETHt","active":false,"amount":0}]}'
 
 cat > "$TMP/probe.sh" <<'INNER'
 #!/bin/bash
+GSETTINGS_SCHEMA_DIR="$EXT/schemas" gsettings set org.gnome.shell.extensions.crypto-tracker coins "$COINS"
+GSETTINGS_SCHEMA_DIR="$EXT/schemas" gsettings set org.gnome.shell.extensions.crypto-tracker base-currency 'USD'
+GSETTINGS_SCHEMA_DIR="$EXT/schemas" gsettings set org.gnome.shell.extensions.crypto-tracker dropdown-view 'portfolio'
+gsettings set org.gnome.shell disable-user-extensions false
+gsettings set org.gnome.shell enabled-extensions "['$UUID', '$PROBE']"
 gnome-shell --headless --virtual-monitor 1280x720 --wayland-display=wayland-shelltest > "$TMP/shell.log" 2>&1 &
 SHELL_PID=$!
-for _ in $(seq 1 40); do
-  gdbus call --session -d org.gnome.Shell -o /org/gnome/Shell \
-    -m org.gnome.Shell.Extensions.GetExtensionInfo "$UUID" >/dev/null 2>&1 && break
+for _ in $(seq 1 45); do
+  grep -q 'SHELLTEST DONE' "$TMP/shell.log" 2>/dev/null && break
   sleep 1
 done
-gdbus call --session -d org.gnome.Shell -o /org/gnome/Shell \
-  -m org.gnome.Shell.Extensions.GetExtensionInfo "$UUID" > "$TMP/info.txt" 2>&1
-sleep 20
 kill $SHELL_PID 2>/dev/null; wait $SHELL_PID 2>/dev/null
 INNER
 chmod +x "$TMP/probe.sh"
 
-XDG_DATA_HOME="$TMP/data" TMP="$TMP" UUID="$UUID" \
-  timeout 120 dbus-run-session -- "$TMP/probe.sh" >/dev/null 2>&1
+XDG_DATA_HOME="$TMP/data" TMP="$TMP" EXT="$EXT" UUID="$UUID" PROBE="$PROBE" COINS="$COINS" \
+  timeout 180 dbus-run-session -- "$TMP/probe.sh" >/dev/null 2>&1
 
-# GetExtensionInfo is unreliable headless, so check the shell log instead.
-enabled=$(grep -o "'enabled': <[a-z]*>" "$TMP/info.txt" 2>/dev/null | grep -o 'true\|false' | head -1)
+grep -o 'SHELLTEST.*' "$TMP/shell.log" | sed 's/^SHELLTEST //' | grep -v '^DONE'
 
-if [ -z "$enabled" ]; then
-  echo "SHELL TESTS FAILED: the shell never reported the extension at all"
-  grep -iE "Could not load extension|Missing metadata" "$TMP/shell.log" 2>/dev/null | head -5
+done_line=$(grep -o 'SHELLTEST DONE .*' "$TMP/shell.log" | tail -1)
+if [ -z "$done_line" ]; then
+  echo
+  echo "SHELL TESTS FAILED: the probe never reported. Shell log:"
+  grep -iE "Extension|Could not load|JS ERROR" "$TMP/shell.log" | head -10
   exit 1
 fi
 
-# grep -c prints 0 AND exits 1 on no match, so never append "|| echo 0" here.
-fails=$(grep -cE "Extension ${UUID}:|Could not load extension|JS ERROR|already disposed|CLUTTER_IS_TEXT" \
-        "$TMP/shell.log" 2>/dev/null | head -1)
-fails=${fails:-0}
+read -r _ _ passed failed <<< "$done_line"
 
-echo "enabled=$enabled  shell_log_failures=$fails"
-if [ "$enabled" = "true" ] && [ "$fails" -eq 0 ]; then
-  echo "SHELL TESTS OK"; exit 0
+# GetExtensionInfo is unreliable headless, so check the shell log instead.
+# grep -c prints 0 AND exits 1 on no match, so never append "|| echo 0".
+disposed=$(grep -cE "already disposed|is disposed|CLUTTER_IS_TEXT|JS ERROR|Extension ${UUID}:|Could not load extension" "$TMP/shell.log" 2>/dev/null | head -1)
+disposed=${disposed:-0}
+if [ "$disposed" -gt 0 ]; then
+  echo "FAIL | the shell logged $disposed extension errors during the run"
+  grep -E "already disposed|is disposed|CLUTTER_IS_TEXT|JS ERROR|Extension ${UUID}:|Could not load extension" "$TMP/shell.log" | head -5 | sed 's/^/     |   /'
+  failed=$((failed + 1))
 fi
-echo "SHELL TESTS FAILED"
-grep -E "Extension ${UUID}:|Could not load extension|JS ERROR|already disposed|CLUTTER_IS_TEXT" \
-  "$TMP/shell.log" 2>/dev/null | head -10
-exit 1
+
+echo
+echo "$passed passed, $failed failed"
+[ "$failed" -eq 0 ] || exit 1

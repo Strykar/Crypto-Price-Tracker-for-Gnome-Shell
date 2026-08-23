@@ -1,0 +1,6 @@
+{
+  "uuid": "crypto-shelltest@local",
+  "name": "crypto shell tests",
+  "description": "Runs the shell-side test cases inside a real gnome-shell and logs the results. Loaded only by tests/shell.sh, never installed.",
+  "shell-version": ["46", "47", "48", "49", "50", "51"]
+}
