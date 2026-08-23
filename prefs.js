@@ -87,7 +87,7 @@ export default class CryptoPrefs extends ExtensionPreferences {
     });
     view.add(comboRow('View', null, VIEWS, ...str('dropdown-view')));
     view.add(comboRow('Portfolio currency',
-                      'Holdings quoted in anything else stay watch-only',
+                      'Holdings quoted in anything else stay price-watch only',
                       [['', 'Not set']].concat([...FIAT].sort().map(c => [c, c])),
                       ...str('base-currency')));
     page.add(view);
@@ -110,7 +110,7 @@ export default class CryptoPrefs extends ExtensionPreferences {
                      Object.entries(PANEL_SEPARATORS).map(([k, v]) => [k, v.label]),
                      ...str('panel-separator')));
     num.add(comboRow('Decimal places',
-                     'Automatic varies the count with the size of the number',
+                     'Automatic varies the count with the size of the number sent by that API',
                      DECIMALS,
                      () => String(s.get_int('decimal-places')),
                      v => s.set_int('decimal-places', parseInt(v, 10))));
@@ -258,6 +258,29 @@ export default class CryptoPrefs extends ExtensionPreferences {
         amount.connect('apply', save(amount, 'amount'));
         amount.show_apply_button = true;
         row.add_row(amount);
+
+        const quote = (coin.symbol.split('/')[1] ?? '').toUpperCase();
+        const currency = s.get_string('base-currency');
+        const eligible = !!currency && quote === currency;
+
+        const check = new Gtk.CheckButton({
+          valign: Gtk.Align.CENTER,
+          active: eligible && coin.inPortfolio !== false,
+          sensitive: eligible,
+          tooltip_text: eligible
+            ? 'Include this pair in the portfolio'
+            : (currency
+                ? `Priced in ${quote}, and the portfolio totals in ${currency}`
+                : 'Set a portfolio currency first'),
+        });
+        check.connect('toggled', () => {
+          const blob2 = JSON.parse(s.get_string('coins'));
+          const target = blob2.coins.find(c => c.id === coin.id);
+          if (!target) return;
+          target.inPortfolio = check.active;
+          s.set_string('coins', JSON.stringify(blob2));
+        });
+        row.add_prefix(check);
 
         const handle = new Gtk.Image({
           icon_name: 'list-drag-handle-symbolic',

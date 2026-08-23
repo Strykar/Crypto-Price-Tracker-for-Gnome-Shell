@@ -1,5 +1,5 @@
 import { test, assertEqual, assertClose } from './harness.js';
-import { isFiat, availableCurrencies, heldIn, total, totalSeries } from '../lib/portfolio.js';
+import { isFiat, availableCurrencies, heldIn, total, totalSeries, inPortfolio } from '../lib/portfolio.js';
 
 const COINS = [
   { id: 'a', symbol: 'BTC/USD', exchange: 'coingecko', amount: 0.12, coingecko_id: 'bitcoin' },
@@ -64,4 +64,20 @@ test('totalSeries aligns on the shortest ring, indexed from newest', () => {
 
 test('totalSeries is empty when nothing is held', () => {
   assertEqual(totalSeries(COINS, 'GBP', FAKE), []);
+});
+
+test('a pair is in the portfolio unless it says otherwise', () => {
+  assertEqual(inPortfolio({}), true, 'pairs predating the option keep working');
+  assertEqual(inPortfolio({ inPortfolio: true }), true);
+  assertEqual(inPortfolio({ inPortfolio: false }), false);
+});
+
+test('an excluded holding drops out of the total', () => {
+  const coins = [
+    { id: 'a', symbol: 'BTC/USD', exchange: 'coingecko', amount: 1 },
+    { id: 'b', symbol: 'ETH/USD', exchange: 'coingecko', amount: 1, inPortfolio: false },
+  ];
+  const now = { getPrice: () => 100, getRing: () => [] };
+  assertEqual(heldIn(coins, 'USD').map(c => c.id), ['a']);
+  assertClose(total(coins, 'USD', now), 100, 1e-6);
 });

@@ -84,13 +84,27 @@ const Indicator = GObject.registerClass(
       const hcell = (text, cls) => new St.Label({
         text, style_class: `crypto-header ${cls}`, y_align: Clutter.ActorAlign.CENTER,
       });
-      this._headerRow.add_child(new St.Icon({ style_class: 'popup-menu-icon' }));
+            this._headerRow.add_child(new St.Icon({ style_class: 'popup-menu-ornament' }));
+      this._headerRow.add_child(hcell('', 'crypto-col-icon'));
+      this._headerRow.add_child(hcell('', 'itemLabel'));
       this._headerRow.add_child(new St.Bin({ x_expand: true }));
       this._headerRow.add_child(hcell('Price', 'crypto-header-chart'));
       this._headerRow.add_child(hcell('Buy / sell', 'crypto-header-chart'));
       this._headerRow.add_child(hcell('Held', 'crypto-col-amount'));
       this._headerRow.add_child(hcell('Value', 'crypto-col-value'));
-      this._headerRow.add_child(new St.Label({ style_class: 'crypto-col-price' }));
+      this._headerRow.add_child(hcell('', 'crypto-col-price'));
+      this._headerRow.add_child(hcell('', 'crypto-col-switch'));
+
+      const gear = new St.Button({
+        child: new St.Icon({ icon_name: 'emblem-system-symbolic', style_class: 'popup-menu-icon' }),
+        style_class: 'btn m0',
+        y_align: Clutter.ActorAlign.CENTER,
+      });
+      gear.connect('clicked', () => {
+        this.menu.close();
+        this.onOpenPreferences?.();
+      });
+      this._headerRow.add_child(gear);
       this._headerRow.visible = false;
 
 
@@ -122,27 +136,36 @@ const Indicator = GObject.registerClass(
       }
 
       const row = new St.BoxLayout({ x_expand: true });
+      const cell = cls => new St.Label({ style_class: cls, y_align: Clutter.ActorAlign.CENTER });
 
-      row.add_child(new St.Icon({ style_class: 'popup-menu-icon' }));
+      row.add_child(new St.Icon({ style_class: 'popup-menu-ornament' }));
+      row.add_child(cell('crypto-col-icon'));
       row.add_child(new St.Label({
-        text: 'Total',
-        style_class: 'itemLabel crypto-total',
+        text: 'Total', style_class: 'itemLabel crypto-total',
         y_align: Clutter.ActorAlign.CENTER,
       }));
       row.add_child(new St.Bin({ x_expand: true }));
 
-      const sparkline = new Sparkline();
+      const sparkline = new Sparkline({ style_class: 'crypto-sparkline crypto-col-chart' });
       sparkline.setSeries(totalSeries(this.coins, currency, priceService));
       row.add_child(sparkline);
 
-      row.add_child(new Sparkline({ opacity: 0 }));
-      row.add_child(new St.Label({ style_class: 'crypto-col-amount' }));
+      row.add_child(cell('crypto-col-chart'));
+      row.add_child(cell('crypto-col-amount'));
       row.add_child(new St.Label({
         text: formatPrice(total(this.coins, currency, priceService), fmt),
         style_class: 'crypto-col-value crypto-total',
         y_align: Clutter.ActorAlign.CENTER,
       }));
-      row.add_child(new St.Label({ style_class: 'crypto-col-price' }));
+      row.add_child(cell('crypto-col-price'));
+      row.add_child(cell('crypto-col-switch'));
+      const delSpacer = new St.Button({
+        child: new St.Icon({ icon_name: 'edit-delete-symbolic', style_class: 'popup-menu-icon' }),
+        style_class: 'btn m0',
+        opacity: 0,
+        reactive: false,
+      });
+      row.add_child(delSpacer);
 
       this._portfolioRow.add_child(row);
     }
@@ -220,6 +243,7 @@ export default class Extension extends Ex {
     };
     this._indicator.onCoinsChanged = refreshPanel;
 
+    this._indicator.onOpenPreferences = () => this.openPreferences();
     this._indicator._buildAddCoinSection(this);
     this._indicator._buildCoinsSection();
 

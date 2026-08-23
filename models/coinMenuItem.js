@@ -9,7 +9,7 @@ import * as SourceClient from '../api/sourceClient.js';
 import * as Settings from '../settings.js';
 import { formatPrice } from '../lib/format.js';
 import { Sparkline } from '../lib/sparkline.js';
-import { quoteOf } from '../lib/portfolio.js';
+import { quoteOf, inPortfolio } from '../lib/portfolio.js';
 
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
@@ -30,6 +30,7 @@ export let CoinMenuItem = GObject.registerClass(
       this.title = coin.title;
       this.exchange = coin.exchange;
       this.amount = coin.amount ?? 0;
+      this.inPortfolio = coin.inPortfolio !== false;
       this.coins = coins;
       this.panelMenu = panelMenu;
 
@@ -64,11 +65,11 @@ export let CoinMenuItem = GObject.registerClass(
 
 
 
-      this.sparkline = new Sparkline();
+      this.sparkline = new Sparkline({ style_class: 'crypto-sparkline crypto-col-chart' });
       this.add_child(expanderEarly);
       this.add_child(this.sparkline);
 
-      this.flowSparkline = new Sparkline({ opacity: 0 });
+      this.flowSparkline = new Sparkline({ opacity: 0, style_class: 'crypto-sparkline crypto-col-chart' });
       this.add_child(this.flowSparkline);
 
       this.amountLbl = new St.Label({
@@ -143,6 +144,7 @@ export let CoinMenuItem = GObject.registerClass(
         exchange: this.exchange,
         coingecko_id: this.coingecko_id,
         amount: this.amount,
+        inPortfolio: this.inPortfolio,
       };
     }
     onPricesUpdated(priceService, chartStyle, fmt) {
@@ -173,7 +175,7 @@ export let CoinMenuItem = GObject.registerClass(
     }
 
     setPortfolioView(on, currency) {
-      const portfolioPair = quoteOf(this) === currency;
+      const portfolioPair = quoteOf(this) === currency && inPortfolio(this._getJSON());
       this.visible = on ? portfolioPair : !portfolioPair;
 
       const show = on && portfolioPair;
@@ -181,7 +183,8 @@ export let CoinMenuItem = GObject.registerClass(
       this.amountLbl.opacity = show ? 255 : 0;
       this.valueLbl.opacity = show ? 255 : 0;
       this.priceLbl.opacity = show ? 0 : 255;
-      this._statusBtn.visible = !on;
+      this._statusBtn.opacity = on ? 0 : 255;
+      this._statusBtn.reactive = !on;
     }
 
     activate(event) {
