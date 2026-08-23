@@ -16,19 +16,21 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
-import Clutter from 'gi://Clutter';
 
 import { Extension as Ex } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Request from './api/request.js';
-import * as SourceClient from './api/sourceClient.js';
 import * as CryptoUtil from './utils/cryptoUtil.js';
 
 import * as Settings from './settings.js';
 import { CoinMenuItem } from './models/coinMenuItem.js';
 import { AddCoinMenuItem } from './models/addCoinMenuItem.js';
+import { PanelBox } from './models/panelBox.js';
+import { PriceService } from './lib/priceService.js';
+import { formatPrice } from './lib/format.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -39,13 +41,8 @@ const Indicator = GObject.registerClass(
     constructor(metadata) {
       super(0.0, `${metadata.name} Indicator`, false);
       this.coins = [];
-      this.menuItem = new St.Label({
-        text: '₿',
-        y_expand: true,
-        y_align: Clutter.ActorAlign.CENTER,
-        style_class: 'menu-item-text',
-      });
-      this.add_child(this.menuItem);
+      this.panelBox = new PanelBox();
+      this.add_child(this.panelBox);
 
       this.coinSection = new PopupMenu.PopupMenuSection();
       this.menu.addMenuItem(this.coinSection);
@@ -72,9 +69,11 @@ const Indicator = GObject.registerClass(
       );
       this._coinsScrollview.add_child(this.coinsScrollViewVbox);
       baseMenuItem.add_child(this._coinsScrollview);
+
     }
 
     _buildAddCoinSection(Me) {
+
       this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
       let addCoinBtnMenu = new PopupMenu.PopupSubMenuMenuItem('Add New Pair');
@@ -94,6 +93,7 @@ const Indicator = GObject.registerClass(
       this._coinsScrollview.set_height(
         CryptoUtil.getHeight(this.coinsScrollViewVbox.height),
       );
+      this.onCoinsChanged?.();
     }
 
     _setCoinsFromSettings() {
@@ -112,7 +112,8 @@ const Indicator = GObject.registerClass(
           coin.exchange = current_exchange;
           Settings.updateCoin(coin);
         }
-        let _coin = new CoinMenuItem(coin, this.menuItem, this.coins, this);
+        let _coin = new CoinMenuItem(coin, this.coins, this);
+        _coin.onChanged = this.onCoinsChanged;
         this.coins.push(_coin);
       }
     }
@@ -125,26 +126,44 @@ export default class Extension extends Ex {
   }
 
   enable() {
-    this._indicator = new Indicator(this.metadata);
-    this._indicator._buildCoinsSection();
-    this._indicator._buildAddCoinSection(this);
-    this._settings = this.getSettings(
-      'org.gnome.shell.extensions.crypto-tracker',
+    this._settings = this.getSettings('org.gnome.shell.extensions.crypto-tracker');
+
+    this._priceService = new PriceService(
+      () => Settings.getCoins(),
+      () => this._settings.get_int('refresh-interval')
     );
+
+    this._indicator = new Indicator(this.metadata);
+
+    const refreshPanel = () => {
+      this._indicator.panelBox.setCoins(this._indicator.coins);
+      this._indicator.panelBox.update(this._priceService);
+    };
+    this._indicator.onCoinsChanged = refreshPanel;
+
+    this._indicator._buildAddCoinSection(this);
+    this._indicator._buildCoinsSection();
+
+    this._priceService.connect(() => {
+      for (const coin of this._indicator.coins)
+        coin.onPricesUpdated(this._priceService);
+      this._indicator.panelBox.update(this._priceService);
+    });
+    this._priceService.start();
 
     Main.panel.addToStatusArea(this.uuid, this._indicator);
   }
 
   disable() {
-    if (this._indicator.coins?.length) {
-      for (const c of this._indicator.coins) {
-        c.destroy();
-      }
-    }
-    this._indicator.destroy();
+    this._priceService?.destroy();
+    this._priceService = null;
+    if (this._indicator?.coins?.length)
+      for (const c of this._indicator.coins) c.destroy();
+    this._indicator?.destroy();
     this._indicator = null;
     this._settings = null;
     CryptoUtil.destroy();
     Request.destroy();
+    Settings.destroy();
   }
 }

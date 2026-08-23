@@ -1,20 +1,19 @@
 // noinspection DuplicatedCode
-import Gio from 'gi://Gio';
 import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
-import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import * as SourceClient from '../api/sourceClient.js';
 import * as Settings from '../settings.js';
+import { formatPrice } from '../lib/format.js';
 
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 export let CoinMenuItem = GObject.registerClass(
   class CoinMenuItem extends PopupMenu.PopupBaseMenuItem {
-    constructor(coin, menuItem, coins, panelMenu) {
+    constructor(coin, coins, panelMenu) {
       super({
         reactive: true,
         activate: true,
@@ -55,6 +54,8 @@ export let CoinMenuItem = GObject.registerClass(
       });
       this.add_child(this.nameLbl);
 
+
+
       let expander = new St.Bin({
         style_class: 'popup-menu-item-expander',
         x_expand: true,
@@ -73,7 +74,7 @@ export let CoinMenuItem = GObject.registerClass(
         // x_expand: true,
         child: this._switch,
       });
-      this._statusBtn.connect('clicked', this._toggle.bind(this, menuItem));
+      this._statusBtn.connect('clicked', this._toggle.bind(this));
       this.add_child(this._statusBtn);
 
       let icon = new St.Icon({
@@ -84,11 +85,10 @@ export let CoinMenuItem = GObject.registerClass(
         child: icon,
         style_class: 'btn m0',
       });
-      delBtn.connect('clicked', this._delCoin.bind(this, menuItem));
+      delBtn.connect('clicked', this._delCoin.bind(this));
       this.add_child(delBtn);
 
-      if (this.activeCoin) this._activeCoin(menuItem, true);
-      this._startTimer(menuItem);
+      if (this.activeCoin) this._activeCoin(true);
 
       this.connect('enter-event', () => {
         viewIcon.icon_name = 'external-link-symbolic';
@@ -99,19 +99,15 @@ export let CoinMenuItem = GObject.registerClass(
         viewIcon.style_class = `popup-menu-icon exchange-icon ${this.exchange.toLowerCase()}`;
       });
     }
-    _activeCoin(menuItem, isInit) {
+    _activeCoin(isInit) {
       this.activeCoin = true;
-
       if (!isInit) Settings.updateCoin(this._getJSON());
-
-      this._updateMenuCoinItems(menuItem, isInit);
-      this._refreshPrice(menuItem);
+      this.onChanged?.();
     }
-    _disableCoin(menuItem) {
+    _disableCoin() {
       this.activeCoin = false;
       Settings.updateCoin(this._getJSON());
-
-      this._updateMenuCoinItems(menuItem);
+      this.onChanged?.();
     }
     _getJSON() {
       return {
@@ -123,45 +119,12 @@ export let CoinMenuItem = GObject.registerClass(
         coingecko_id: this.coingecko_id,
       };
     }
-    _getPrice() {
-      let parts = this.symbol.split('/');
-      const src = SourceClient.getSource(this.exchange);
-      if (src?.id === 'coingecko') parts[0] = this.coingecko_id;
-
-      return SourceClient.getPrice(parts[0], parts[1], this.exchange);
-    }
-
-    _startTimer(menuItem) {
-      this._refreshPrice(menuItem);
-
-      this.timeOutTag = GLib.timeout_add(1, 1000 * 10, async () => {
-        this._refreshPrice(menuItem);
-        return true;
-      });
-    }
-    async _refreshPrice(menuItem) {
-      try {
-        let price = await this._getPrice();
-        if (this._destroyed) return; // destroyed while the request was in flight
-        if (!price) return; // if error happened, not change current price.
-
-        if (this.activeCoin) {
-          let re = new RegExp(
-            '(' +
-              `${this.title || this.symbol}` +
-              ') ((\\.\\.\\.)|(\\d*(,?\\d\\d\\d)*|\\d+)(\\.?\\d*))?',
-            'g',
-          );
-          let menuPairPrice = isNaN(+price.replaceAll(',', '')) ? '...' : price;
-
-          menuItem.text = menuItem.text.replace(
-            re,
-            `${this.title || this.symbol} ${menuPairPrice}`,
-          );
-        }
-        this.nameLbl.text = `${this.title || this.symbol}`;
-        this.priceLbl.text = `${price}`;
-      } catch (error) {}
+    onPricesUpdated(priceService) {
+      if (this._destroyed) return;
+      const price = priceService.getPrice(this.id);
+      this.nameLbl.text = `${this.title || this.symbol}`;
+      this.priceLbl.text = formatPrice(price);
+      this.sparkline.setSeries(priceService.getRing(this.id));
     }
     get state() {
       return this._switch.state;
@@ -170,6 +133,7 @@ export let CoinMenuItem = GObject.registerClass(
       this._switch.state = state;
       this.checkAccessibleState();
     }
+
 
     activate(event) {
       if (this._switch.mapped) return;
@@ -185,9 +149,9 @@ export let CoinMenuItem = GObject.registerClass(
       super.activate(event);
     }
 
-    _toggle(menu) {
+    _toggle() {
       this._switch.toggle();
-      this.toggleCoin(menu);
+      this.toggleCoin();
       this.checkAccessibleState();
     }
 
@@ -203,44 +167,21 @@ export let CoinMenuItem = GObject.registerClass(
       }
     }
 
-    toggleCoin(menuItem) {
+    toggleCoin() {
       if (this.state) {
-        this._activeCoin(menuItem);
+        this._activeCoin();
       } else {
-        this._disableCoin(menuItem);
+        this._disableCoin();
       }
     }
 
-    removeTimer() {
-      if (this.timeOutTag) {
-        GLib.source_remove(this.timeOutTag);
-        this.timeOutTag = 0;
-      }
-    }
-
-    _updateMenuCoinItems(menuItem, isInit) {
-      let activeCoins = this.coins.filter(({ activeCoin }) => activeCoin);
-      let newMenuItemText = activeCoins
-        .map(({ title, symbol }) => `${title || symbol} ...`)
-        .join(' | ');
-
-      if (isInit)
-        newMenuItemText +=
-          (newMenuItemText ? ' | ' : '') + `${this.title || this.symbol} ...`;
-
-      menuItem.text = newMenuItemText || '₿';
-
-      if (!isInit) activeCoins.forEach((coin) => coin._refreshPrice(menuItem));
-    }
-
-    _delCoin(menuItem) {
+    _delCoin() {
       Settings.delCoin({ id: this.id });
 
       let index = this.coins.findIndex((coin) => {
         return coin.id === this.id;
       });
       if (index !== -1) this.coins.splice(index, 1);
-      this._updateMenuCoinItems(menuItem, false);
 
       this.destroy();
       this.panelMenu._buildCoinsSection();
@@ -254,7 +195,6 @@ export let CoinMenuItem = GObject.registerClass(
 
     destroy() {
       this._destroyed = true;
-      this.removeTimer();
       super.destroy();
     }
   },

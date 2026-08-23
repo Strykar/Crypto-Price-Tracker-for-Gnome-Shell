@@ -35,11 +35,3 @@ export function getChartUrl(coin) {
   const source = getSource(coin.exchange);
   return source ? source.chartUrl(coin) : null;
 }
-
-export async function getPrice(name, vol, exchange) {
-  const source = getSource(exchange);
-  if (!source) return undefined;
-  const coin = { id: '_shim', symbol: `${name}/${vol}`, coingecko_id: name };
-  const prices = await fetchPrices(source, [coin]);
-  return prices.get('_shim');
-}

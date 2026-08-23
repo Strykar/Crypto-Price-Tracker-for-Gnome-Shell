@@ -11,4 +11,8 @@ import './migrate.test.js';
 
 import './duplicateCoin.test.js';
 
+import './format.test.js';
+
+import './priceService.test.js';
+
 System.exit(await run());

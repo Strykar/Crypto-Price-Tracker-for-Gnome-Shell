@@ -13,5 +13,10 @@
         name='exchange'>
       <default>'Binance'</default>
     </key>
+    <key type="i" name="refresh-interval">
+      <default>15</default>
+      <summary>Seconds between price refreshes</summary>
+      <description>Lower bound. Each source also has its own minimum.</description>
+    </key>
   </schema>
 </schemalist>
