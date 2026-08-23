@@ -224,6 +224,10 @@ export default class Extension extends Ex {
       this._settings.connect('changed::number-separator', () => this._redraw()),
       this._settings.connect('changed::decimal-places', () => this._redraw()),
       this._settings.connect('changed::panel-separator', () => this._redraw()),
+      this._settings.connect('changed::coins', () => {
+        this._indicator._buildCoinsSection();
+        refreshPanel();
+      }),
       // PriceService reads the interval once, so restart it.
       this._settings.connect('changed::refresh-interval', () => {
         this._priceService.stop();

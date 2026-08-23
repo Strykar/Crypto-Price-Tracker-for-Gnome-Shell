@@ -101,13 +101,6 @@ export let updateCoin = function (coin) {
   setCoins(coins);
 };
 
-export let setCoinAmount = function (id, amount) {
-  const coins = getCoins();
-  for (const coin of coins)
-    if (coin.id === id) coin.amount = amount;
-  setCoins(coins);
-};
-
 /**
  * @param  {[{}]} coins
  */

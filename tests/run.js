@@ -23,4 +23,6 @@ import './history.test.js';
 
 import './search.test.js';
 
+import './reorder.test.js';
+
 System.exit(await run());

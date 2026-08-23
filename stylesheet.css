@@ -103,7 +103,6 @@
   -crypto-flat-color: rgb(148, 153, 161);
 }
 
-.crypto-amount { width: 84px; margin: 0 6px; }
 .crypto-picker-hint { font-size: 0.9em; padding-bottom: 6px; }
 
 .crypto-panel-coin {
@@ -125,4 +124,25 @@
 }
 .crypto-panel-fallback {
   font-size: 0.9em;
+}
+
+.crypto-col-amount {
+  font-family: monospace;
+  min-width: 70px;
+  text-align: right;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, 0.75);
+}
+.crypto-col-value {
+  font-family: monospace;
+  min-width: 90px;
+  text-align: right;
+  padding-left: 8px;
+}
+
+.crypto-col-price {
+  font-family: monospace;
+  min-width: 90px;
+  text-align: right;
+  padding-left: 8px;
 }

@@ -48,5 +48,9 @@
       <default>'dot'</default>
       <summary>Symbol shown between coins in the panel</summary>
     </key>
+    <key type="s" name="search-field">
+      <default>'any'</default>
+      <summary>Which field the coin search matches against</summary>
+    </key>
   </schema>
 </schemalist>

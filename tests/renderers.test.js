@@ -100,3 +100,7 @@ test('price renderers do not declare a series kind, so they default to price', (
   for (const id of ['gradient-fill', 'plain-line', 'split-at-open'])
     assertEqual(getRenderer(id).series ?? 'price', 'price', id);
 });
+
+
+
+

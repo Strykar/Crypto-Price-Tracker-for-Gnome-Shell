@@ -120,3 +120,8 @@ for (const src of SOURCES) {
       `${src.id} example "${src.example}" is not among its sample coins`);
   });
 }
+
+test('every source usable from preferences declares an example', () => {
+  for (const id of ['coingecko', 'binance', 'okx', 'crypto'])
+    assertEqual(typeof getSource(id)?.example, 'string', `${id} has no example`);
+});

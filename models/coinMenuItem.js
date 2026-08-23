@@ -50,6 +50,11 @@ export let CoinMenuItem = GObject.registerClass(
       viewBtn.connect('clicked', this._openChart.bind(this));
       this.add_child(viewBtn);
 
+      const expanderEarly = new St.Bin({
+        style_class: 'popup-menu-item-expander',
+        x_expand: true,
+      });
+
       this.nameLbl = new St.Label({
         text: this.title || this.symbol,
         style_class: 'itemLabel',
@@ -57,35 +62,34 @@ export let CoinMenuItem = GObject.registerClass(
       });
       this.add_child(this.nameLbl);
 
-      this.amountEntry = new St.Entry({
-        style_class: 'crypto-amount',
-        can_focus: true,
-        visible: false,
-      });
-      this.amountEntry.clutter_text.connect('activate', () => {
-        const value = parseFloat(this.amountEntry.text);
-        if (!isFinite(value) || value < 0) {
-          this.amountEntry.text = String(this.amount ?? '');
-          return;
-        }
-        this.amount = value;
-        Settings.setCoinAmount(this.id, value);
-        this.onChanged?.();
-      });
-      this.add_child(this.amountEntry);
+
 
       this.sparkline = new Sparkline();
+      this.add_child(expanderEarly);
       this.add_child(this.sparkline);
 
-      let expander = new St.Bin({
-        style_class: 'popup-menu-item-expander',
-        x_expand: true,
+      this.flowSparkline = new Sparkline({ opacity: 0 });
+      this.add_child(this.flowSparkline);
+
+      this.amountLbl = new St.Label({
+        style_class: 'crypto-col-amount',
+        y_align: Clutter.ActorAlign.CENTER,
+        opacity: 0,
       });
-      this.add_child(expander);
+      this.add_child(this.amountLbl);
+
+      this.valueLbl = new St.Label({
+        style_class: 'crypto-col-value',
+        y_align: Clutter.ActorAlign.CENTER,
+        opacity: 0,
+      });
+      this.add_child(this.valueLbl);
+
+
 
       this.priceLbl = new St.Label({
         text: '...',
-        style_class: 'itemLabel text-align-right',
+        style_class: 'itemLabel crypto-col-price',
         y_align: Clutter.ActorAlign.CENTER,
       });
       this.add_child(this.priceLbl);
@@ -146,6 +150,14 @@ export let CoinMenuItem = GObject.registerClass(
       const price = priceService.getPrice(this.id);
       this.nameLbl.text = `${this.title || this.symbol}`;
       this.priceLbl.text = formatPrice(price, fmt);
+
+      const held = Number(this.amount) || 0;
+      this.amountLbl.text = held ? String(held) : '—';
+      this.valueLbl.text = held && isFinite(price) ? formatPrice(held * price, fmt) : '—';
+      this.flowSparkline.setRendererId('buy-sell');
+      const f = priceService.getFlow(this.id);
+      this.flowSparkline.setSeries(f ?? []);
+
       this.sparkline.setRendererId(chartStyle);
       const wantsFlow = Sparkline.seriesKind(chartStyle) === 'flow';
       const flow = wantsFlow ? priceService.getFlow(this.id) : null;
@@ -161,12 +173,14 @@ export let CoinMenuItem = GObject.registerClass(
     }
 
     setPortfolioView(on, currency) {
-      const eligible = on && quoteOf(this) === currency;
-      this.amountEntry.visible = eligible;
+      const portfolioPair = quoteOf(this) === currency;
+      this.visible = on ? portfolioPair : !portfolioPair;
+
+      const show = on && portfolioPair;
+      this.flowSparkline.opacity = show ? 255 : 0;
+      this.amountLbl.opacity = show ? 255 : 0;
+      this.valueLbl.opacity = show ? 255 : 0;
       this._statusBtn.visible = !on;
-      // Runs every tick, so leave the entry alone while the user is typing.
-      const editing = this.amountEntry.clutter_text?.has_key_focus?.();
-      if (eligible && !editing) this.amountEntry.text = String(this.amount ?? 0);
     }
 
     activate(event) {

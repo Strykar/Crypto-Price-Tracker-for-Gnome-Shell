@@ -61,3 +61,25 @@ test('a real coin outranks a meme that took its name', () => {
   ];
   assertEqual(fuzzySearch('bitcoin', coins)[0].id, 'bitcoin');
 });
+
+const LINKISH = [
+  { id: 'chainlink', symbol: 'link', name: 'Chainlink' },
+  { id: 'linkdao', symbol: 'lkd', name: 'LinkDao' },
+  { id: 'linkeye', symbol: 'let', name: 'Linkeye' },
+];
+
+test('ticker only excludes coins that merely match by name', () => {
+  const r = fuzzySearch('link', LINKISH, 40, 'ticker').map(c => c.id);
+  assertEqual(r, ['chainlink']);
+});
+
+test('name only excludes coins that merely match by ticker', () => {
+  const r = fuzzySearch('let', LINKISH, 40, 'name').map(c => c.id);
+  assertEqual(r.includes('linkeye'), false, 'let is a ticker, not part of the name');
+});
+
+test('the default searches both fields', () => {
+  const r = fuzzySearch('link', LINKISH).map(c => c.id);
+  assertEqual(r.length > 1, true);
+  assertEqual(r[0], 'chainlink', 'the real one still ranks first');
+});
